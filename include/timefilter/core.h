@@ -10,6 +10,7 @@
 #ifndef __CORE_H
 #define __CORE_H
 
+#include "tinyformat/tinyformat.h"
 #include "moonlight/exceptions.h"
 #include "moonlight/maps.h"
 #include <map>
@@ -144,9 +145,18 @@ public:
         return ! (*this == rhs);
     }
 
+    friend std::ostream& operator<<(std::ostream& out, const Duration& duration) {
+        tfm::format(out, "Duration<%dd %02d:%02d>",
+                    duration.days(),
+                    duration.hours(),
+                    duration.minutes());
+        return out;
+    }
+
 private:
     int _minutes;
 };
+
 
 // --------------------------------------------------------
 class Date {
@@ -213,17 +223,24 @@ public:
         yy = year() - adjustment;
         return static_cast<Weekday>(
             ((day() + (13 * mm - 1) / 5 +
-              yy + yy / 4 - yy / 100 + yy / 400) % 7) + 1);
+              yy + yy / 4 - yy / 100 + yy / 400) % 7));
     }
 
-    int year() const;
-    Month month() const;
+    int year() const {
+        return _year;
+    }
+
+    Month month() const {
+        return _month;
+    }
 
     int nmonth() const {
         return static_cast<int>(month()) + 1;
     }
 
-    int day() const;
+    int day() const {
+        return _day;
+    }
 
     /**
      * Throws ValueError if the date is invalid.
@@ -307,8 +324,8 @@ public:
             .tm_min = 0,
             .tm_hour = 0,
             .tm_mday = day(),
-            .tm_mon = nmonth(),
-            .tm_year = year()
+            .tm_mon = nmonth() - 1,
+            .tm_year = year() - 1900
         };
     }
 
@@ -374,6 +391,14 @@ public:
     Duration operator-(const Date& rhs) {
         double diff = difftime(to_utc_date(), rhs.to_utc_date());
         return Duration(diff / 60);
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const Date& date) {
+        tfm::format(out, "Date<%04d-%02d-%02d>",
+                    date.year(),
+                    date.nmonth(),
+                    date.day());
+        return out;
     }
 
 private:
@@ -526,7 +551,7 @@ public:
 private:
     void load_struct_tm(const struct tm& utime) {
         _date = Date().with_year(utime.tm_year)
-            .with_nmonth(utime.tm_mon)
+            .with_nmonth(utime.tm_mon + 1)
             .with_day(utime.tm_mday);
         _time = Time(utime.tm_hour, utime.tm_min);
     }

@@ -56,11 +56,9 @@ int main() {
         Date dateA;
 
         std::cout << "dateA = " << dateA << std::endl;
-        std::cout << "dateA.to_utc_date() = " << dateA.to_utc_date() << std::endl;
         assert_equal(dateA.year(), 1970, "dateA year");
         assert_equal(dateA.month(), Month::January, "dateA month");
         assert_equal(dateA.day(), 1, "dateA day");
-        assert_equal(dateA.to_utc_date(), (time_t)0ul, "dateA to_utc_date()");
 
         Date dateB(1988, Month::June, 8);
         std::cout << "dateB = " << dateB << std::endl;
@@ -68,7 +66,7 @@ int main() {
         assert_equal(dateB.year(), 1988, "dateB year");
         assert_equal(dateB.month(), Month::June, "dateB month");
         assert_equal(dateB.day(), 8, "dateB day");
-        assert_equal(dateB.to_utc_date(), (time_t)581731200ul, "dateB to_utc_date()");
+        // TODO: Replace this test: assert_equal(dateB.to_timestamp(), (time_t)581731200ul, "dateB to_utc_date()");
         assert_equal(dateB.weekday(), Weekday::Wednesday, "dateB weekday()");
         assert_equal(dateB.end_of_month(), Date(1988, Month::June, 30), "dateB end_of_month()");
         assert_equal(dateB.start_of_month(), Date(1988, Month::June, 1), "dateB start_of_month()");
@@ -92,6 +90,79 @@ int main() {
         } catch (const ValueError& e) {
             std::cout << "dateZZ -> Caught expected ValueError." << std::endl;
         }
+    })
+    .test("class Time", [&]() {
+        Time timeA;
+        std::cout << "timeA = " << timeA << std::endl;
+        assert_equal(timeA.hour(), 0, "timeA hour()");
+        assert_equal(timeA.minute(), 0, "timeA minute()");
+
+        Time timeB(23, 59);
+        std::cout << "timeB " << timeB << std::endl;
+        assert_equal(timeB.hour(), 23, "timeB hour()");
+        assert_equal(timeB.minute(), 59, "timeB minute()");
+
+        assert_true(timeA < timeB, "timeA < timeB");
+        assert_true(timeB > timeA, "timeB > timeA");
+        assert_true(timeB == Time(23, 59), "timeB == Time(23, 59)");
+
+        try {
+            Time timeC(99, 99);
+            std::cout << "timeC " << timeC << std::endl;
+            assert_true(false, "timeC should have thrown ValueError.");
+
+        } catch (const ValueError& e) {
+            std::cout << "timeC -> Caught expected ValueError." << std::endl;
+        }
+    })
+    .test("class Datetime", [&]() {
+        Datetime dtA;
+        std::cout << "dtA = " << dtA << std::endl;
+        assert_equal(dtA.date(), Date(1970, Month::January, 1), "dtA date()");
+        assert_equal(dtA.time(), Time(0, 0), "dtA time()");
+
+        Datetime dtB(1608163834);
+        std::cout << "dtB = " << dtB << std::endl;
+        assert_equal(dtB.date(), Date(2020, Month::December, 17), "dtB date()");
+        assert_equal(dtB.time(), Time(0, 10), "dtB time()");
+
+        Duration durationA(2, 30);
+        std::cout << "durationA = " << durationA << std::endl;
+        Datetime dtC = dtB - durationA;
+        std::cout << "dtC = dtB - durationA = " << dtC << std::endl;
+        assert_equal(dtC.date(), Date(2020, Month::December, 16), "dtC date()");
+        assert_equal(dtC.time(), Time(21, 40), "dtC time()");
+        Duration durationB = dtC - dtB;
+        std::cout << "durationB = dtC - dtB = " << durationB << std::endl;
+        assert_equal(durationB, durationA, "durationB == durationA");
+
+        Duration durationC(30, 23, 15);
+        std::cout << "durationC = " << durationC << std::endl;
+        Datetime dtD = dtB + durationC;
+        std::cout << "dtD = dtB + durationC = " << dtD << std::endl;
+        assert_equal(dtD.date(), Date(2021, Month::January, 16), "dtD date()");
+        assert_equal(dtD.time(), Time(23, 25), "dtD time()");
+
+        Datetime dtE = dtD.at_zone(LOCAL);
+        std::cout << "dtE = dtD.at_zone(LOCAL) = " << dtE << std::endl;
+        Datetime dtF = dtE.at_zone(UTC);
+        std::cout << "dtF = dtE.at_zone(UTC) = " << dtF << std::endl;
+        assert_false(dtE != dtF, "dtE != dtF");
+        assert_equal(dtD, dtF, "dtD == dtF");
+
+        Datetime nowUTC = Datetime::now();
+        std::cout << "nowUTC = " << nowUTC << std::endl;
+
+        Datetime nowLocal = nowUTC.at_zone(LOCAL);
+        std::cout << "nowLocal = " << nowLocal << std::endl;
+        std::cout << "nowLocal.is_dst() = " << nowLocal.is_dst() << std::endl;
+        Duration sixMonths = Duration::of_days(180);
+        std::cout << "sixMonths = " << sixMonths << std::endl;
+        Datetime futureLocal = nowLocal + sixMonths;
+        std::cout << "futureLocal = " << futureLocal << std::endl;
+        std::cout << "futureLocal.is_dst() = " << futureLocal.is_dst() << std::endl;
+
+
     })
     .die_on_signal(SIGSEGV)
     .run();

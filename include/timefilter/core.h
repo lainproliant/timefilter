@@ -7,8 +7,8 @@
  * Distributed under terms of the MIT license.
  */
 
-#ifndef __CORE_H
-#define __CORE_H
+#ifndef __TIMEFILTER_CORE_H
+#define __TIMEFILTER_CORE_H
 
 #include "tinyformat/tinyformat.h"
 #include "moonlight/exceptions.h"
@@ -19,6 +19,8 @@
 #include <cstring>
 
 namespace timefilter {
+
+const std::string DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S";
 
 // --------------------------------------------------------
 class ValueError : public moonlight::core::Exception {
@@ -107,6 +109,17 @@ public:
         time_t utime = mktime(&local_time);
         set_env_tz(env_tz);
         return utime;
+    }
+
+    std::string strftime(const std::string& format, struct tm local_time) const {
+        auto env_tz = get_env_tz();
+        set_env_tz(_tz_name);
+        const int bufsize = 1024;
+        char buffer[bufsize];
+        ::strftime(buffer, bufsize, format.c_str(), &local_time);
+        std::string result(buffer);
+        set_env_tz(env_tz);
+        return result;
     }
 
 private:
@@ -255,7 +268,7 @@ public:
     /**
      * Advance forward the given number of calendar days.
      */
-    Date advance_days(int days) {
+    Date advance_days(int days) const {
         Date date = *this;
 
         for (int x = 0; x < days; x++) {
@@ -272,7 +285,7 @@ public:
     /**
      * Recede backward the given number of calendar days.
      */
-    Date recede_days(int days) {
+    Date recede_days(int days) const {
         Date date = *this;
 
         for (int x = 0; x < days; x++) {
@@ -289,7 +302,7 @@ public:
     /**
      * Implements Zeller's rule to determine the weekday.
      */
-    Weekday weekday() {
+    Weekday weekday() const {
         int adjustment, mm, yy;
 
         adjustment = (14 - nmonth()) / 12;
@@ -556,8 +569,8 @@ public:
     Datetime(const struct tm& local_time) : Datetime(local_time, UTC) {}
 
     Datetime(time_t timestamp) : _zone(UTC) {
-        struct tm utime = zone().mk_struct_tm(timestamp);
-        load_struct_tm(utime);
+        struct tm local_time = zone().mk_struct_tm(timestamp);
+        load_struct_tm(local_time);
     }
 
     static Datetime now() {
@@ -588,16 +601,28 @@ public:
         return _date;
     }
 
-    Date& date() {
-        return _date;
+    int year() const {
+        return date().year();
+    }
+
+    Month month() const {
+        return date().month();
+    }
+
+    int day() const {
+        return date().day();
     }
 
     const Time& time() const {
         return _time;
     }
 
-    Time& time() {
-        return _time;
+    int hour() const {
+        return time().hour();
+    }
+
+    int minute() const {
+        return time().minute();
     }
 
     const Zone& zone() const {
@@ -608,8 +633,38 @@ public:
         return Datetime(date, time(), zone());
     }
 
+    Datetime with_year(int year) const {
+        return with_date(
+            date().with_year(year)
+        );
+    }
+
+    Datetime with_month(Month month) const {
+        return with_date(
+            date().with_month(month)
+        );
+    }
+
+    Datetime with_day(int day) const {
+        return with_date(
+            date().with_day(day)
+        );
+    }
+
     Datetime with_time(const Time& time) const {
         return Datetime(date(), time, zone());
+    }
+
+    Datetime with_hour(int hour) const {
+        return with_time(
+            time().with_hour(hour)
+        );
+    }
+
+    Datetime with_minute(int minute) const {
+        return with_time(
+            time().with_minute(minute)
+        );
     }
 
     Datetime with_zone(const Zone& zone) const {
@@ -674,6 +729,10 @@ public:
         return Duration(labs(to_timestamp() / 60 - rhs.to_timestamp() / 60));
     }
 
+    std::string format(const std::string& format = DEFAULT_FORMAT) {
+        return zone().strftime(format, to_struct_tm());
+    }
+
     friend std::ostream& operator<<(std::ostream& out, const Datetime& dt) {
         tfm::format(out, "Datetime<%04d-%02d-%02d %02d:%02d %s>",
                     dt.date().year(),
@@ -686,16 +745,62 @@ public:
     }
 
 private:
-    void load_struct_tm(const struct tm& utime) {
-        _date = Date().with_year(utime.tm_year + 1900)
-            .with_nmonth(utime.tm_mon + 1)
-            .with_day(utime.tm_mday);
-        _time = Time(utime.tm_hour, utime.tm_min);
+    void load_struct_tm(struct tm local_time) {
+        _date = Date().with_year(local_time.tm_year + 1900)
+            .with_nmonth(local_time.tm_mon + 1)
+            .with_day(local_time.tm_mday);
+        _time = Time(local_time.tm_hour, local_time.tm_min);
     }
 
     Date _date;
     Time _time;
     Zone _zone;
+};
+
+// --------------------------------------------------------
+class Range {
+public:
+    Range(const Datetime& start, const Datetime& end) : _start(start), _end(end) {
+        validate();
+    }
+
+    Range(const Datetime& start, const Duration& duration) : Range(start, start + duration) { }
+
+    static Range for_days(const Date& date, int days) {
+        return Range(Datetime(date), Datetime(date.advance_days(days)));
+    }
+
+    const Datetime& start() const {
+        return _start;
+    }
+
+    const Datetime& end() const {
+        return _end;
+    }
+
+    Duration duration() const {
+        return end() - start();
+    }
+
+    bool contains(const Datetime& dt) const {
+        return dt >= start() && dt < end();
+    }
+
+    Range with_zone(const Zone& zone) const {
+        return Range(
+            start().with_zone(zone),
+            end().with_zone(zone));
+    }
+
+private:
+    void validate() {
+        if (start() >= end()) {
+            throw ValueError("End must be after start for Range.");
+        }
+    }
+
+    Datetime _start;
+    Datetime _end;
 };
 
 // --------------------------------------------------------
@@ -714,6 +819,7 @@ enum class FilterType {
 class Filter {
 public:
     Filter(FilterType type) : _type(type) { }
+    virtual ~Filter() { }
 
     const std::string& type_name() const {
         static std::map<FilterType, std::string> NAME_TABLE = {
@@ -734,10 +840,13 @@ public:
         return _type;
     }
 
+    virtual std::optional<Range> next_range(const Datetime& pivot) const = 0;
+    virtual std::optional<Range> prev_range(const Datetime& pivot) const = 0;
+
 private:
     FilterType _type;
 };
 
 }
 
-#endif /* !__CORE_H */
+#endif /* !__TIMEFILTER_CORE_H */

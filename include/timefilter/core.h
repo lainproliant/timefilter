@@ -729,7 +729,7 @@ public:
         return Duration(labs(to_timestamp() / 60 - rhs.to_timestamp() / 60));
     }
 
-    std::string format(const std::string& format = DEFAULT_FORMAT) {
+    std::string format(const std::string& format = DEFAULT_FORMAT) const {
         return zone().strftime(format, to_struct_tm());
     }
 
@@ -792,6 +792,19 @@ public:
             end().with_zone(zone));
     }
 
+    bool operator==(const Range& rhs) const {
+        return start() == rhs.start() && end() == rhs.end();
+    }
+
+    bool operator!=(const Range& rhs) const {
+        return ! (*this == rhs);
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const Range& range) {
+        tfm::format(out, "Range<%s - %s>", range.start().format(), range.end().format());
+        return out;
+    }
+
 private:
     void validate() {
         if (start() >= end()) {
@@ -805,14 +818,14 @@ private:
 
 // --------------------------------------------------------
 enum class FilterType {
+    Stack,
     Year,
     Month,
     WeekdayOfMonth,
     Weekday,
     Monthday,
-    Hour,
-    Minute,
-    Duration
+    Time,
+    Date
 };
 
 // --------------------------------------------------------
@@ -823,14 +836,14 @@ public:
 
     const std::string& type_name() const {
         static std::map<FilterType, std::string> NAME_TABLE = {
+            {FilterType::Stack, "Stack"},
             {FilterType::Year, "Year"},
             {FilterType::Month, "Month"},
             {FilterType::WeekdayOfMonth, "WeekdayOfMonth"},
             {FilterType::Weekday, "Weekday"},
             {FilterType::Monthday, "Month"},
-            {FilterType::Hour, "Hour"},
-            {FilterType::Minute, "Minute"},
-            {FilterType::Duration, "Duration"}
+            {FilterType::Date, "Date"},
+            {FilterType::Time, "Time"}
         };
 
         return moonlight::maps::get(NAME_TABLE, type(), "???");

@@ -66,7 +66,6 @@ int main() {
         assert_equal(dateB.year(), 1988, "dateB year");
         assert_equal(dateB.month(), Month::June, "dateB month");
         assert_equal(dateB.day(), 8, "dateB day");
-        // TODO: Replace this test: assert_equal(dateB.to_timestamp(), (time_t)581731200ul, "dateB to_utc_date()");
         assert_equal(dateB.weekday(), Weekday::Wednesday, "dateB weekday()");
         assert_equal(dateB.end_of_month(), Date(1988, Month::June, 30), "dateB end_of_month()");
         assert_equal(dateB.start_of_month(), Date(1988, Month::June, 1), "dateB start_of_month()");
@@ -161,8 +160,6 @@ int main() {
         Datetime futureLocal = nowLocal + sixMonths;
         std::cout << "futureLocal = " << futureLocal << std::endl;
         std::cout << "futureLocal.is_dst() = " << futureLocal.is_dst() << std::endl;
-
-
     })
     .die_on_signal(SIGSEGV)
     .run();

@@ -16,15 +16,17 @@ namespace timefilter {
 
 class MonthdayFilter : public Filter {
 public:
-    MonthdayFilter(int day) : Filter(FilterType::Monthday), _day(day) { }
-
+    MonthdayFilter(int day) : Filter(FilterType::Monthday), _day(day) {
+        validate();
+    }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
         Date date = pivot.date().advance_days(1);
         auto monthday = get_monthday(date);
 
-        while (!monthday.has_value() || monthday <= date) {
+        while (!monthday.has_value() || monthday < date || monthday == pivot.date()) {
             date = date.next_month();
+            monthday = get_monthday(date);
         }
 
         return Range::for_days(monthday.value(), 1);
@@ -36,16 +38,32 @@ public:
 
         while (!monthday.has_value() || monthday > date) {
             date = date.prev_month();
+            monthday = get_monthday(date);
         }
 
         return Range::for_days(monthday.value(), 1);
     }
 
 private:
+    void validate() {
+        if (_day == 0 || _day < -31 || _day > 31) {
+            throw ValueError("Offset x must be: '-31 <= x <= 31' and can't be 0 for offset in MonthdayFilter.");
+        }
+    }
+
     std::optional<Date> get_monthday(const Date& pivot) const {
-        try {
-            return pivot.with_day(_day);
-        } catch (const ValueError& e) {
+        Date slid;
+
+        if (_day > 0) {
+            slid = pivot.start_of_month().advance_days(_day - 1);
+
+        } else {
+            slid = pivot.end_of_month().recede_days((_day * -1) - 1);
+        }
+
+        if (slid.month() == pivot.month()) {
+            return slid;
+        } else {
             return {};
         }
     }

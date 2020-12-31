@@ -36,7 +36,7 @@ public:
         Date date = pivot.date();
         auto monthday = get_monthday(date);
 
-        while (!monthday.has_value() || monthday > date) {
+        while (!monthday.has_value() || monthday > pivot.date()) {
             date = date.prev_month();
             monthday = get_monthday(date);
         }

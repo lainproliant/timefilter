@@ -313,6 +313,10 @@ public:
               yy + yy / 4 - yy / 100 + yy / 400) % 7));
     }
 
+    int nweekday() const {
+        return static_cast<int>(weekday());
+    }
+
     int year() const {
         return _year;
     }
@@ -589,7 +593,8 @@ public:
             .tm_mday = date().day(),
             .tm_mon = date().nmonth() - 1,
             .tm_year = date().year() - 1900,
-            .tm_isdst = -1
+            .tm_wday = date().nweekday(),
+            .tm_isdst = -1,
         };
     }
 

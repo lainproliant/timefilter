@@ -11,6 +11,7 @@
 #define __TIMEFILTER_WEEKDAY_FILTER_H
 
 #include "timefilter/core.h"
+#include "moonlight/variadic.h"
 #include <set>
 
 namespace timefilter {
@@ -18,6 +19,10 @@ namespace timefilter {
 class WeekdayFilter : public Filter {
 public:
     WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) { }
+
+    static WeekdayFilter for_day(Weekday weekday) {
+        return WeekdayFilter({weekday});
+    }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
         Date date = pivot.date().advance_days(1);

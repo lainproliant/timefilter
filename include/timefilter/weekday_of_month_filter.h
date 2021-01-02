@@ -21,25 +21,25 @@ public:
     }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
-        Date pivot_date = pivot.date();
-        std::optional<Date> date;
+        Date date = pivot.date();
+        std::optional<Date> month_weekday;
 
-        for (date = find(pivot_date);
-             !date.has_value() || date <= pivot_date;
-             pivot_date = pivot_date.next_month());
+        for (month_weekday = find(date);
+             !month_weekday.has_value() || month_weekday <= pivot.date();
+             date = date.next_month(), month_weekday = find(date));
 
-        return Range::for_days(date.value(), 1);
+        return Range::for_days(month_weekday.value(), 1);
     }
 
     std::optional<Range> prev_range(const Datetime& pivot) const override {
-        Date pivot_date = pivot.date();
-        std::optional<Date> date;
+        Date date = pivot.date();
+        std::optional<Date> month_weekday;
 
-        for (date = find(pivot_date);
-             !date.has_value() || date > pivot_date;
-             pivot_date = pivot_date.prev_month());
+        for (month_weekday = find(date);
+             !month_weekday.has_value() || month_weekday > pivot.date();
+             date = date.prev_month(), month_weekday = find(date));
 
-        return Range::for_days(date.value(), 1);
+        return Range::for_days(month_weekday.value(), 1);
     }
 
 private:
@@ -51,12 +51,10 @@ private:
 
     std::optional<Date> find(const Date& pivot) const {
         if (_offset > 0) {
-            Date date = pivot.start_of_month();
+            Date date = pivot.start_of_month().recede_days(1);
 
-            for (int x = 0;
-                 x < _offset && date.month() == pivot.month();
-                 date++) {
-
+            for (int x = 0; x < _offset;) {
+                date++;
                 if (date.weekday() == _weekday) {
                     x++;
                 }
@@ -68,12 +66,11 @@ private:
             return date;
 
         } else {
-            Date date = pivot.end_of_month();
+            int offset = -1 * _offset;
+            Date date = pivot.end_of_month().advance_days(1);
 
-            for (int x = 0;
-                 x < _offset && date.month() == pivot.month();
-                 date--) {
-
+            for (int x = 0; x < offset;) {
+                date--;
                 if (date.weekday() == _weekday) {
                     x++;
                 }
@@ -82,7 +79,6 @@ private:
             if (date.month() != pivot.month()) {
                 return {};
             }
-
             return date;
         }
     }

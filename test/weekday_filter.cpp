@@ -106,6 +106,82 @@ int main() {
         assert_equal(*rangeAC, Range(Datetime(2020, Month::December, 28),
                                      Datetime(2020, Month::December, 29)));
     })
+    .test("next_range() for multiple weekdays", [&]() {
+        Datetime dt (2021, Month::January, 1);
+        auto filter = WeekdayFilter({Weekday::Monday, Weekday::Tuesday, Weekday::Friday});
+
+        std::cout << "dt = " << dt << std::endl;
+
+        auto rangeA = filter.next_range(dt);
+        std::cout << "rangeA.has_value() = " << rangeA.has_value() << std::endl;
+        assert_true(rangeA.has_value());
+
+        std::cout << "rangeA = " << *rangeA << std::endl;
+        assert_equal(*rangeA, Range(Datetime(2021, Month::January, 4),
+                                    Datetime(2021, Month::January, 5)));
+
+        auto rangeB = filter.next_range(rangeA->start());
+        std::cout << "rangeB.has_value() = " << rangeB.has_value() << std::endl;
+        assert_true(rangeB.has_value());
+
+        std::cout << "rangeB = " << *rangeB << std::endl;
+        assert_equal(*rangeB, Range(Datetime(2021, Month::January, 5),
+                                    Datetime(2021, Month::January, 6)));
+
+        auto rangeC = filter.next_range(rangeB->start());
+        std::cout << "rangeC.has_value() = " << rangeC.has_value() << std::endl;
+        assert_true(rangeC.has_value());
+
+        std::cout << "rangeC = " << *rangeC << std::endl;
+        assert_equal(*rangeC, Range(Datetime(2021, Month::January, 8),
+                                    Datetime(2021, Month::January, 9)));
+
+        auto rangeD = filter.next_range(rangeC->start());
+        std::cout << "rangeD.has_value() = " << rangeD.has_value() << std::endl;
+        assert_true(rangeD.has_value());
+
+        std::cout << "rangeD = " << *rangeD << std::endl;
+        assert_equal(*rangeD, Range(Datetime(2021, Month::January, 11),
+                                    Datetime(2021, Month::January, 12)));
+    })
+    .test("prev_range() for multiple weekdays", [&]() {
+        Datetime dt (2021, Month::January, 1);
+        auto filter = WeekdayFilter({Weekday::Monday, Weekday::Tuesday, Weekday::Friday});
+
+        std::cout << "dt = " << dt << std::endl;
+
+        auto rangeA = filter.prev_range(dt);
+        std::cout << "rangeA.has_value() = " << rangeA.has_value() << std::endl;
+        assert_true(rangeA.has_value());
+
+        std::cout << "rangeA = " << *rangeA << std::endl;
+        assert_equal(*rangeA, Range(Datetime(2021, Month::January, 1),
+                                    Datetime(2021, Month::January, 2)));
+
+        auto rangeB = filter.prev_range(rangeA->start() - Duration::of_days(1));
+        std::cout << "rangeB.has_value() = " << rangeB.has_value() << std::endl;
+        assert_true(rangeB.has_value());
+
+        std::cout << "rangeB = " << *rangeB << std::endl;
+        assert_equal(*rangeB, Range(Datetime(2020, Month::December, 29),
+                                    Datetime(2020, Month::December, 30)));
+
+        auto rangeC = filter.prev_range(rangeB->start() - Duration::of_days(1));
+        std::cout << "rangeC.has_value() = " << rangeC.has_value() << std::endl;
+        assert_true(rangeC.has_value());
+
+        std::cout << "rangeC = " << *rangeC << std::endl;
+        assert_equal(*rangeC, Range(Datetime(2020, Month::December, 28),
+                                    Datetime(2020, Month::December, 29)));
+
+        auto rangeD = filter.prev_range(rangeC->start() - Duration::of_days(1));
+        std::cout << "rangeD.has_value() = " << rangeD.has_value() << std::endl;
+        assert_true(rangeD.has_value());
+
+        std::cout << "rangeD = " << *rangeD << std::endl;
+        assert_equal(*rangeD, Range(Datetime(2020, Month::December, 25),
+                                    Datetime(2020, Month::December, 26)));
+    })
     .die_on_signal(SIGSEGV)
     .run();
 }

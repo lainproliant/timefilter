@@ -37,7 +37,8 @@ public:
         Range pivot_range = Range::for_days(pivot.date(), 1).with_zone(pivot.zone());
 
         for (auto iter = _stack.begin(); iter != _stack.end(); iter++) {
-            auto result = (*iter)->next_range(pivot_range.start());
+            auto range = (*iter)->next_range(pivot_range.start());
+            auto result = digest_clip_range(**iter, pivot_range, range);
             if (result.has_value()) {
                 pivot_range = *result;
             } else {
@@ -52,7 +53,8 @@ public:
         Range pivot_range = Range::for_days(pivot.date(), 1).with_zone(pivot.zone());
 
         for (auto iter = _stack.begin(); iter != _stack.end(); iter++) {
-            auto result = (*iter)->prev_range(pivot_range.start());
+            auto range = (*iter)->prev_range(pivot_range.end() + Duration(1));
+            auto result = digest_clip_range(**iter, pivot_range, range);
             if (result.has_value()) {
                 pivot_range = *result;
             } else {
@@ -61,10 +63,21 @@ public:
         }
 
         return pivot_range;
-
     }
 
 private:
+    std::optional<Range> digest_clip_range(const Filter& filter, const Range& pivot_range, std::optional<Range> range) const {
+        if (! range.has_value()) {
+            return {};
+        }
+
+        if (filter.should_clip()) {
+            return range->clip_to(pivot_range);
+        }
+
+        return range;
+    }
+
     std::vector<Filter*> _stack;
 };
 

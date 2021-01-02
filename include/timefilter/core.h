@@ -791,6 +791,25 @@ public:
         return dt >= start() && dt < end();
     }
 
+    bool contains(const Range& other) const {
+        return other.start() >= start() && other.end() <= end();
+    }
+
+    bool intersects(const Range& other) const {
+        return contains(other)
+        || (other.start() >= start() && other.start() < end())
+        || (other.end() > start() && other.end() < end());
+    }
+
+    std::optional<Range> clip_to(const Range& clipping_range) {
+        if (! intersects(clipping_range)) {
+            return {};
+        }
+
+        return Range(std::max(start(), clipping_range.start()),
+                     std::min(end(), clipping_range.end()));
+    }
+
     Range with_zone(const Zone& zone) const {
         return Range(
             start().with_zone(zone),
@@ -860,6 +879,10 @@ public:
 
     virtual std::optional<Range> next_range(const Datetime& pivot) const = 0;
     virtual std::optional<Range> prev_range(const Datetime& pivot) const = 0;
+
+    virtual bool should_clip() const {
+        return true;
+    }
 
 private:
     FilterType _type;

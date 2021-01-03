@@ -10,7 +10,7 @@
 
 from pathlib import Path
 
-from xeno.build import build, default, provide, sh, target, recipe
+from xeno.build import Recipe, build, default, provide, sh, target, recipe
 
 INCLUDES = [
     "-I./include",
@@ -32,8 +32,8 @@ ENV = dict(
 
 # -------------------------------------------------------------------
 @provide
-async def submodules():
-     await sh("git submodule update --init --recursive").resolve()
+def submodules():
+    return sh("git submodule update --init --recursive")
 
 # -------------------------------------------------------------------
 @recipe
@@ -59,7 +59,7 @@ def headers():
 # -------------------------------------------------------------------
 @target
 async def tests(test_sources, headers, submodules):
-    return [compile_test(src, headers) for src in test_sources]
+    return Recipe([compile_test(src, headers) for src in test_sources], setup=submodules)
 
 # -------------------------------------------------------------------
 @default

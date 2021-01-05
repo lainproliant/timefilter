@@ -849,7 +849,7 @@ enum class FilterType {
     Weekday,
     Monthday,
     Time,
-    Date
+    Range
 };
 
 // --------------------------------------------------------
@@ -866,8 +866,8 @@ public:
             {FilterType::WeekdayOfMonth, "WeekdayOfMonth"},
             {FilterType::Weekday, "Weekday"},
             {FilterType::Monthday, "Month"},
-            {FilterType::Date, "Date"},
-            {FilterType::Time, "Time"}
+            {FilterType::Time, "Time"},
+            {FilterType::Range, "Range"},
         };
 
         return moonlight::maps::get(NAME_TABLE, type(), "???");

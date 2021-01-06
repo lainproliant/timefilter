@@ -1,5 +1,5 @@
 /*
- * stack.h
+ * filter_stack.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
  * Date: Friday December 25, 2020
@@ -7,32 +7,34 @@
  * Distributed under terms of the MIT license.
  */
 
-#ifndef __TIMEFILTER_STACK_H
-#define __TIMEFILTER_STACK_H
+#ifndef __TIMEFILTER_FILTER_STACK_H
+#define __TIMEFILTER_FILTER_STACK_H
 
 #include "timefilter/core.h"
 
 namespace timefilter {
 
 // --------------------------------------------------------
-class Stack : public Filter {
+class FilterStack : public Filter {
 public:
-    Stack() : Filter(FilterType::Stack) { }
+    FilterStack() : Filter(FilterType::Stack) { }
+    FilterStack(const std::vector<FilterPointer>& stack) : Filter(FilterType::Stack),
+        _stack(stack) { }
 
     template<class T, class... TD>
-    Stack& push(TD&&... params) {
-        T* filter = new T(std::forward<TD>(params)...);
+    FilterStack& push(TD&&... params) {
+        T* filter = make<T>(std::forward<TD>(params)...);
         _stack.push_back(filter);
         return *this;
     }
 
-    virtual ~Stack() {
-        while (_stack.size() > 0) {
-            delete _stack.back();
-            _stack.pop_back();
-        }
+    virtual ~FilterStack() { }
+
+    virtual std::optional<Range> next_range(const Datetime& pivot) const override {
+
     }
 
+    /*
     virtual std::optional<Range> next_range(const Datetime& pivot) const override {
         Range pivot_range = Range::for_days(pivot.date(), 1).with_zone(pivot.zone());
 
@@ -48,6 +50,7 @@ public:
 
         return pivot_range;
     }
+    */
 
     virtual std::optional<Range> prev_range(const Datetime& pivot) const override {
         Range pivot_range = Range::for_days(pivot.date(), 1).with_zone(pivot.zone());
@@ -78,9 +81,9 @@ private:
         return range;
     }
 
-    std::vector<Filter*> _stack;
+    std::vector<FilterPointer> _stack;
 };
 
 }
 
-#endif /* !__TIMEFILTER_STACK_H */
+#endif /* !__TIMEFILTER_FILTER_STACK_H */

@@ -17,6 +17,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 namespace timefilter {
 
@@ -887,6 +888,8 @@ public:
 private:
     FilterType _type;
 };
+
+typedef std::shared_ptr<Filter> FilterPointer;
 
 }
 

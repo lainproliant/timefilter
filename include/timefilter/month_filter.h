@@ -11,41 +11,54 @@
 #define __TIMEFILTER_MONTH_FILTER_H
 
 #include "timefilter/core.h"
+#include "moonlight/variadic.h"
+#include <set>
 
 namespace timefilter {
 
 class MonthFilter : public Filter {
 public:
-    MonthFilter(Month month) : Filter(FilterType::Month), _month(month) { }
+    template<class... TD>
+    static std::shared_ptr<MonthFilter> for_months(TD... params) {
+        std::set<Month> months;
+        moonlight::variadic::pass{months.insert(params)...};
+        return create(months);
+    }
+
+    static std::shared_ptr<MonthFilter> create(const std::set<Month>& months) {
+        return std::make_shared<MonthFilter>(months);
+    }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
-        Date month_start = pivot.date().with_day(1).with_month(_month);
+        Date date;
 
-        if (month_start <= pivot.date()) {
-            month_start = month_start.with_year(month_start.year() + 1);
-        }
+        for (date = pivot.date().with_day(1).next_month();
+             _months.find(date.month()) == _months.end();
+             date = date.next_month());
 
-        return range(month_start, pivot.zone());
+        return range(date, pivot.zone());
     }
 
     std::optional<Range> prev_range(const Datetime& pivot) const override {
-        Date month_start = pivot.date().with_day(1).with_month(_month);
+        Date date;
 
-        if (month_start > pivot.date()) {
-            month_start = month_start.with_year(month_start.year() - 1);
-        }
+        for (date = pivot.date().with_day(1);
+             _months.find(date.month()) == _months.end();
+             date = date.prev_month());
 
-        return range(month_start, pivot.zone());
+        return range(date, pivot.zone());
     }
 
 private:
+    MonthFilter(const std::set<Month> months) : Filter(FilterType::Month), _months(months) { }
+
     Range range(const Date& month_start, const Zone& zone) const {
         return Range(
             Datetime(month_start),
             Datetime(month_start.next_month())).with_zone(zone);
     }
 
-    Month _month;
+    std::set<Month> _months;
 };
 
 }

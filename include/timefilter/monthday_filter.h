@@ -16,8 +16,8 @@ namespace timefilter {
 
 class MonthdayFilter : public Filter {
 public:
-    MonthdayFilter(int day) : Filter(FilterType::Monthday), _day(day) {
-        validate();
+    std::shared_ptr<MonthdayFilter> create(int monthday) {
+        return std::make_shared<MonthdayFilter>(monthday);
     }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
@@ -45,6 +45,10 @@ public:
     }
 
 private:
+    MonthdayFilter(int day) : Filter(FilterType::Monthday), _day(day) {
+        validate();
+    }
+
     void validate() {
         if (_day == 0 || _day < -31 || _day > 31) {
             throw ValueError("Offset x must be: '-31 <= x <= 31' and can't be 0 for offset in MonthdayFilter.");

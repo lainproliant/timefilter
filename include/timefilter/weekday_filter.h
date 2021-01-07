@@ -18,10 +18,15 @@ namespace timefilter {
 
 class WeekdayFilter : public Filter {
 public:
-    WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) { }
+    template<class... TD>
+    static std::shared_ptr<WeekdayFilter> for_days(TD... params) {
+        std::set<Weekday> weekdays;
+        moonlight::variadic::pass{weekdays.insert(params)...};
+        return create(weekdays);
+    }
 
-    static WeekdayFilter for_day(Weekday weekday) {
-        return WeekdayFilter({weekday});
+    static std::shared_ptr<WeekdayFilter> create(const std::set<Weekday> weekdays) {
+        return std::make_shared<WeekdayFilter>(weekdays);
     }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
@@ -41,6 +46,8 @@ public:
     }
 
 private:
+    WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) { }
+
     std::set<Weekday> _weekdays;
 };
 

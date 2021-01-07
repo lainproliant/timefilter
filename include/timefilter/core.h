@@ -843,32 +843,34 @@ private:
 
 // --------------------------------------------------------
 enum class FilterType {
-    Stack,
-    Year,
     Month,
-    WeekdayOfMonth,
-    Weekday,
     Monthday,
+    Range,
+    Select,
+    Stack,
     Time,
-    Range
+    Weekday,
+    WeekdayOfMonth,
+    Year,
 };
 
 // --------------------------------------------------------
-class Filter {
+class Filter : public std::enable_shared_from_this<Filter> {
 public:
     Filter(FilterType type) : _type(type) { }
-    virtual ~Filter() { }
+    virtual ~Filter() {  }
 
     const std::string& type_name() const {
         static std::map<FilterType, std::string> NAME_TABLE = {
-            {FilterType::Stack, "Stack"},
-            {FilterType::Year, "Year"},
             {FilterType::Month, "Month"},
-            {FilterType::WeekdayOfMonth, "WeekdayOfMonth"},
-            {FilterType::Weekday, "Weekday"},
             {FilterType::Monthday, "Month"},
-            {FilterType::Time, "Time"},
             {FilterType::Range, "Range"},
+            {FilterType::Select, "Select"},
+            {FilterType::Stack, "Stack"},
+            {FilterType::Time, "Time"},
+            {FilterType::Weekday, "Weekday"},
+            {FilterType::WeekdayOfMonth, "WeekdayOfMonth"},
+            {FilterType::Year, "Year"},
         };
 
         return moonlight::maps::get(NAME_TABLE, type(), "???");

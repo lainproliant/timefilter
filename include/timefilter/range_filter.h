@@ -16,7 +16,13 @@ namespace timefilter {
 
 class RangeFilter : public Filter {
 public:
-    RangeFilter(const Range& range) : Filter(FilterType::Range), _range(range) { }
+    static std::shared_ptr<RangeFilter> create(const Range& range) {
+        return std::make_shared<RangeFilter>(range);
+    }
+
+    static std::shared_ptr<RangeFilter> create(const Datetime& start, const Datetime& end) {
+        return create(Range(start, end));
+    }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
         if (pivot < _range.start()) {
@@ -33,6 +39,8 @@ public:
     }
 
 private:
+    RangeFilter(const Range& range) : Filter(FilterType::Range), _range(range) { }
+
     Range _range;
 };
 

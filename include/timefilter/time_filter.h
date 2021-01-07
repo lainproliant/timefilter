@@ -16,7 +16,9 @@ namespace timefilter {
 
 class TimeFilter : public Filter {
 public:
-    TimeFilter(const Time& time) : Filter(FilterType::Time), _time(time) { }
+    static std::shared_ptr<TimeFilter> create(const Time& time) {
+        return std::make_shared<TimeFilter>(time);
+    }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
         if (pivot.time() < _time) {
@@ -38,6 +40,8 @@ public:
     }
 
 private:
+    TimeFilter(const Time& time) : Filter(FilterType::Time), _time(time) { }
+
     Range range(const Datetime& dt, const Zone& zone) const {
         return Range(
             dt,

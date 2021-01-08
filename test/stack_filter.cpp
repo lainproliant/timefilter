@@ -23,9 +23,18 @@ int main() {
         Datetime dtA(2021, Month::January, 6);
         Datetime dtB(2020, Month::June, 8);
 
+        std::cout << "dtA = " << dtA << std::endl;
+        std::cout << "dtB = " << dtB << std::endl;
+
         auto filterA = StackFilter()
             .push(MonthFilter::create(Month::December))
-            .push(WeekdayFilter::for_days(Weekday::Monday, Weekday::Wednesday, Weekday::Friday));
+            .push(WeekdayFilter::create(Weekday::Monday, Weekday::Wednesday, Weekday::Friday));
+
+        auto rangeAA = filterA.next_range(dtA);
+        auto rangeAB = filterA.next_range(dtB);
+        std::cout << "rangeAA = " << *rangeAA << std::endl;
+        std::cout << "rangeAB = " << *rangeAB << std::endl;
+
     })
     .die_on_signal(SIGSEGV)
     .run();

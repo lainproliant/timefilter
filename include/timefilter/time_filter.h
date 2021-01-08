@@ -11,36 +11,81 @@
 #define __TIMEFILTER_TIME_FILTER_H
 
 #include "timefilter/core.h"
+#include "moonlight/variadic.h"
+#include <set>
 
 namespace timefilter {
 
 class TimeFilter : public Filter {
 public:
+    TimeFilter(const std::set<Time>& times) : Filter(FilterType::Time), _times(times) { }
+
+    template<class... TD>
+    static std::shared_ptr<TimeFilter> create(const Time& first, TD... params) {
+        std::set<Time> times;
+        times.insert(first);
+        moonlight::variadic::pass{times.insert(params)...};
+        return create(times);
+    }
+
     static std::shared_ptr<TimeFilter> create(const Time& time) {
-        return std::make_shared<TimeFilter>(time);
+        std::set<Time> times;
+        times.insert(time);
+        return create(times);
+    }
+
+    static std::shared_ptr<TimeFilter> create(const std::set<Time>& times) {
+        return std::make_shared<TimeFilter>(times);
     }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
-        if (pivot.time() < _time) {
-            return range(Datetime(pivot.date(), _time), pivot.zone());
-
-        } else {
-            return range(Datetime(pivot.date().advance_days(1), _time),
-                         pivot.zone());
-        }
+        return range(get_next_daytime(pivot), pivot.zone());
     }
 
     std::optional<Range> prev_range(const Datetime& pivot) const override {
-        if (pivot.time() < _time) {
-            return range(Datetime(pivot.date().recede_days(1), _time),
-                         pivot.zone());
-        } else {
-            return range(Datetime(pivot.date(), _time), pivot.zone());
-        }
+        return range(get_prev_daytime(pivot), pivot.zone());
     }
 
 private:
-    TimeFilter(const Time& time) : Filter(FilterType::Time), _time(time) { }
+    std::vector<Datetime> get_times_for_day(const Date& pivot) const {
+        std::vector<Datetime> daytimes;
+        std::transform(_times.begin(), _times.end(), daytimes.end(), [&](const Time& time) {
+            return Datetime(pivot, time);
+        });
+        std::sort(daytimes.begin(), daytimes.end());
+        return daytimes;
+    }
+
+    Datetime get_next_daytime(const Datetime& pivot) const {
+        Datetime date = pivot + Duration(1);
+
+        for (;;) {
+            auto daytimes = get_times_for_day(pivot.date());
+            auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
+                return dt > (date - Duration(1));
+            });
+            if (iter != daytimes.end()) {
+                return *iter;
+            }
+            date = Datetime(date.date().advance_days(1), pivot.zone());
+        }
+    }
+
+    Datetime get_prev_daytime(const Datetime& pivot) const {
+        Datetime date = pivot;
+
+        for (;;) {
+            auto daytimes = get_times_for_day(pivot.date());
+            auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
+                return dt <= date;
+
+            });
+            if (iter != daytimes.end()) {
+                return *iter;
+            }
+            date = Datetime(date.date().recede_days(1), pivot.zone());
+        }
+    }
 
     Range range(const Datetime& dt, const Zone& zone) const {
         return Range(
@@ -49,7 +94,7 @@ private:
         ).with_zone(zone);
     }
 
-    Time _time;
+    std::set<Time> _times;
 };
 
 }

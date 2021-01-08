@@ -18,14 +18,23 @@ namespace timefilter {
 
 class WeekdayFilter : public Filter {
 public:
+    WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) { }
+
     template<class... TD>
-    static std::shared_ptr<WeekdayFilter> for_days(TD... params) {
+    static std::shared_ptr<WeekdayFilter> create(Weekday first, TD... params) {
         std::set<Weekday> weekdays;
+        weekdays.insert(first);
         moonlight::variadic::pass{weekdays.insert(params)...};
         return create(weekdays);
     }
 
-    static std::shared_ptr<WeekdayFilter> create(const std::set<Weekday> weekdays) {
+    static std::shared_ptr<WeekdayFilter> create(Weekday weekday) {
+        std::set<Weekday> weekdays;
+        weekdays.insert(weekday);
+        return create(weekdays);
+    }
+
+    static std::shared_ptr<WeekdayFilter> create(const std::set<Weekday>& weekdays) {
         return std::make_shared<WeekdayFilter>(weekdays);
     }
 
@@ -46,8 +55,6 @@ public:
     }
 
 private:
-    WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) { }
-
     std::set<Weekday> _weekdays;
 };
 

@@ -23,7 +23,7 @@ int main() {
         Datetime dtB(2000, Month::January, 1);
         Datetime dtC(2020, Month::December, 31);
 
-        auto filterA = WeekdayFilter::for_day(Weekday::Monday);
+        auto filterA = WeekdayFilter::create(Weekday::Monday);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtA weekday = " << dtA.format("%A") << std::endl;
@@ -67,7 +67,7 @@ int main() {
         Datetime dtB(2000, Month::January, 1);
         Datetime dtC(2020, Month::December, 31);
 
-        auto filterA = WeekdayFilter::for_day(Weekday::Monday);
+        auto filterA = WeekdayFilter::create(Weekday::Monday);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtA weekday = " << dtA.format("%A") << std::endl;
@@ -108,7 +108,7 @@ int main() {
     })
     .test("next_range() for multiple weekdays", [&]() {
         Datetime dt (2021, Month::January, 1);
-        auto filter = WeekdayFilter::for_days(Weekday::Monday, Weekday::Tuesday, Weekday::Friday);
+        auto filter = WeekdayFilter::create(Weekday::Monday, Weekday::Tuesday, Weekday::Friday);
 
         std::cout << "dt = " << dt << std::endl;
 
@@ -146,7 +146,7 @@ int main() {
     })
     .test("prev_range() for multiple weekdays", [&]() {
         Datetime dt (2021, Month::January, 1);
-        auto filter = WeekdayFilter::for_days(Weekday::Monday, Weekday::Tuesday, Weekday::Friday);
+        auto filter = WeekdayFilter::create(Weekday::Monday, Weekday::Tuesday, Weekday::Friday);
 
         std::cout << "dt = " << dt << std::endl;
 

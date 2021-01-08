@@ -22,16 +22,16 @@ int main() {
         Datetime dtA = Datetime(2020, Month::January, 1);
         Datetime dtB = Datetime(2021, Month::January, 20);
 
-        auto filterA = WeekdayOfMonthFilter(Weekday::Wednesday, 2);
-        auto filterB = WeekdayOfMonthFilter(Weekday::Tuesday, -1);
+        auto filterA = WeekdayOfMonthFilter::create(Weekday::Wednesday, 2);
+        auto filterB = WeekdayOfMonthFilter::create(Weekday::Tuesday, -1);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
 
-        auto rangeAA = filterA.next_range(dtA);
-        auto rangeAB = filterA.next_range(dtB);
-        auto rangeBA = filterB.next_range(dtA);
-        auto rangeBB = filterB.next_range(dtB);
+        auto rangeAA = filterA->next_range(dtA);
+        auto rangeAB = filterA->next_range(dtB);
+        auto rangeBA = filterB->next_range(dtA);
+        auto rangeBB = filterB->next_range(dtB);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
         assert_true(rangeAA.has_value());
@@ -65,16 +65,16 @@ int main() {
         Datetime dtA = Datetime(2020, Month::January, 1);
         Datetime dtB = Datetime(2021, Month::January, 20);
 
-        auto filterA = WeekdayOfMonthFilter(Weekday::Wednesday, 2);
-        auto filterB = WeekdayOfMonthFilter(Weekday::Tuesday, -1);
+        auto filterA = WeekdayOfMonthFilter::create(Weekday::Wednesday, 2);
+        auto filterB = WeekdayOfMonthFilter::create(Weekday::Tuesday, -1);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
 
-        auto rangeAA = filterA.prev_range(dtA);
-        auto rangeAB = filterA.prev_range(dtB);
-        auto rangeBA = filterB.prev_range(dtA);
-        auto rangeBB = filterB.prev_range(dtB);
+        auto rangeAA = filterA->prev_range(dtA);
+        auto rangeAB = filterA->prev_range(dtB);
+        auto rangeBA = filterB->prev_range(dtA);
+        auto rangeBB = filterB->prev_range(dtB);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
         assert_true(rangeAA.has_value());

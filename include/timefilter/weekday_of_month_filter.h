@@ -20,6 +20,10 @@ public:
         validate();
     }
 
+    static std::shared_ptr<WeekdayOfMonthFilter> create(Weekday weekday, int offset) {
+        return std::make_shared<WeekdayOfMonthFilter>(weekday, offset);
+    }
+
     std::optional<Range> next_range(const Datetime& pivot) const override {
         Date date = pivot.date();
         std::optional<Date> month_weekday;

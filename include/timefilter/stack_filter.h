@@ -81,6 +81,8 @@ private:
 // ------------------------------------------------------------------
 class StackFilter : public Filter {
 public:
+    StackFilter() : Filter(FilterType::Stack) { }
+
     std::optional<Range> next_range(const Datetime& pivot) const {
         return view().next_range(pivot);
     }
@@ -98,8 +100,6 @@ private:
     StackViewFilter view() const {
         return StackViewFilter(_stack.begin(), _stack.end());
     }
-
-    StackFilter() : Filter(FilterType::Stack) { }
 
     std::vector<FilterPointer> _stack;
 };

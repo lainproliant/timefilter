@@ -16,6 +16,8 @@ namespace timefilter {
 
 class RangeFilter : public Filter {
 public:
+    RangeFilter(const Range& range) : Filter(FilterType::Range), _range(range) { }
+
     static std::shared_ptr<RangeFilter> create(const Range& range) {
         return std::make_shared<RangeFilter>(range);
     }
@@ -39,8 +41,6 @@ public:
     }
 
 private:
-    RangeFilter(const Range& range) : Filter(FilterType::Range), _range(range) { }
-
     Range _range;
 };
 

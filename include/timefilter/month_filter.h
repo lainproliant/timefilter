@@ -18,10 +18,19 @@ namespace timefilter {
 
 class MonthFilter : public Filter {
 public:
+    MonthFilter(const std::set<Month>& months) : Filter(FilterType::Month), _months(months) { }
+
     template<class... TD>
-    static std::shared_ptr<MonthFilter> for_months(TD... params) {
+    static std::shared_ptr<MonthFilter> create(Month first, TD... params) {
         std::set<Month> months;
+        months.insert(first);
         moonlight::variadic::pass{months.insert(params)...};
+        return create(months);
+    }
+
+    static std::shared_ptr<MonthFilter> create(Month month) {
+        std::set<Month> months;
+        months.insert(month);
         return create(months);
     }
 
@@ -50,8 +59,6 @@ public:
     }
 
 private:
-    MonthFilter(const std::set<Month> months) : Filter(FilterType::Month), _months(months) { }
-
     Range range(const Date& month_start, const Zone& zone) const {
         return Range(
             Datetime(month_start),

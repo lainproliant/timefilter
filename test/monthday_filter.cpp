@@ -24,30 +24,30 @@ int main() {
         Datetime dtC (1988, Month::February, 1);
         Datetime dtD (1988, Month::February, 29);
 
-        MonthdayFilter filterA(1);
-        MonthdayFilter filterB(-2);
-        MonthdayFilter filterC(31);
-        MonthdayFilter filterD(29);
+        auto filterA = MonthdayFilter::create(1);
+        auto filterB = MonthdayFilter::create(-2);
+        auto filterC = MonthdayFilter::create(31);
+        auto filterD = MonthdayFilter::create(29);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
 
-        auto rangeAA = filterA.next_range(dtA);
-        auto rangeAB = filterA.next_range(dtB);
-        auto rangeAC = filterA.next_range(dtC);
-        auto rangeAD = filterA.next_range(dtD);
-        auto rangeBA = filterB.next_range(dtA);
-        auto rangeBB = filterB.next_range(dtB);
-        auto rangeBC = filterB.next_range(dtC);
-        auto rangeBD = filterB.next_range(dtD);
-        auto rangeCA = filterC.next_range(dtA);
-        auto rangeCB = filterC.next_range(dtB);
-        auto rangeCC = filterC.next_range(dtC);
-        auto rangeCD = filterC.next_range(dtD);
-        auto rangeDA = filterD.next_range(dtA);
-        auto rangeDB = filterD.next_range(dtB);
-        auto rangeDC = filterD.next_range(dtC);
-        auto rangeDD = filterD.next_range(dtD);
+        auto rangeAA = filterA->next_range(dtA);
+        auto rangeAB = filterA->next_range(dtB);
+        auto rangeAC = filterA->next_range(dtC);
+        auto rangeAD = filterA->next_range(dtD);
+        auto rangeBA = filterB->next_range(dtA);
+        auto rangeBB = filterB->next_range(dtB);
+        auto rangeBC = filterB->next_range(dtC);
+        auto rangeBD = filterB->next_range(dtD);
+        auto rangeCA = filterC->next_range(dtA);
+        auto rangeCB = filterC->next_range(dtB);
+        auto rangeCC = filterC->next_range(dtC);
+        auto rangeCD = filterC->next_range(dtD);
+        auto rangeDA = filterD->next_range(dtA);
+        auto rangeDB = filterD->next_range(dtB);
+        auto rangeDC = filterD->next_range(dtC);
+        auto rangeDD = filterD->next_range(dtD);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
         assert_true(rangeAA.has_value());
@@ -167,30 +167,30 @@ int main() {
         Datetime dtC (1988, Month::February, 1);
         Datetime dtD (1988, Month::February, 29);
 
-        MonthdayFilter filterA(1);
-        MonthdayFilter filterB(-2);
-        MonthdayFilter filterC(31);
-        MonthdayFilter filterD(29);
+        auto filterA = MonthdayFilter::create(1);
+        auto filterB = MonthdayFilter::create(-2);
+        auto filterC = MonthdayFilter::create(31);
+        auto filterD = MonthdayFilter::create(29);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
 
-        auto rangeAA = filterA.prev_range(dtA);
-        auto rangeAB = filterA.prev_range(dtB);
-        auto rangeAC = filterA.prev_range(dtC);
-        auto rangeAD = filterA.prev_range(dtD);
-        auto rangeBA = filterB.prev_range(dtA);
-        auto rangeBB = filterB.prev_range(dtB);
-        auto rangeBC = filterB.prev_range(dtC);
-        auto rangeBD = filterB.prev_range(dtD);
-        auto rangeCA = filterC.prev_range(dtA);
-        auto rangeCB = filterC.prev_range(dtB);
-        auto rangeCC = filterC.prev_range(dtC);
-        auto rangeCD = filterC.prev_range(dtD);
-        auto rangeDA = filterD.prev_range(dtA);
-        auto rangeDB = filterD.prev_range(dtB);
-        auto rangeDC = filterD.prev_range(dtC);
-        auto rangeDD = filterD.prev_range(dtD);
+        auto rangeAA = filterA->prev_range(dtA);
+        auto rangeAB = filterA->prev_range(dtB);
+        auto rangeAC = filterA->prev_range(dtC);
+        auto rangeAD = filterA->prev_range(dtD);
+        auto rangeBA = filterB->prev_range(dtA);
+        auto rangeBB = filterB->prev_range(dtB);
+        auto rangeBC = filterB->prev_range(dtC);
+        auto rangeBD = filterB->prev_range(dtD);
+        auto rangeCA = filterC->prev_range(dtA);
+        auto rangeCB = filterC->prev_range(dtB);
+        auto rangeCC = filterC->prev_range(dtC);
+        auto rangeCD = filterC->prev_range(dtD);
+        auto rangeDA = filterD->prev_range(dtA);
+        auto rangeDB = filterD->prev_range(dtB);
+        auto rangeDC = filterD->prev_range(dtC);
+        auto rangeDD = filterD->prev_range(dtD);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
         assert_true(rangeAA.has_value());

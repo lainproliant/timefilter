@@ -46,10 +46,14 @@ public:
         return range(get_prev_daytime(pivot), pivot.zone());
     }
 
+    int order() const override {
+        return 4;
+    }
+
 private:
     std::vector<Datetime> get_times_for_day(const Date& pivot) const {
         std::vector<Datetime> daytimes;
-        std::transform(_times.begin(), _times.end(), daytimes.end(), [&](const Time& time) {
+        std::transform(_times.begin(), _times.end(), std::back_inserter(daytimes), [&](const Time& time) {
             return Datetime(pivot, time);
         });
         std::sort(daytimes.begin(), daytimes.end());
@@ -60,7 +64,7 @@ private:
         Datetime date = pivot + Duration(1);
 
         for (;;) {
-            auto daytimes = get_times_for_day(pivot.date());
+            auto daytimes = get_times_for_day(date.date());
             auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
                 return dt > (date - Duration(1));
             });
@@ -75,7 +79,7 @@ private:
         Datetime date = pivot;
 
         for (;;) {
-            auto daytimes = get_times_for_day(pivot.date());
+            auto daytimes = get_times_for_day(date.date());
             auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
                 return dt <= date;
 

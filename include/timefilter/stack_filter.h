@@ -15,7 +15,7 @@
 namespace timefilter {
 
 // ------------------------------------------------------------------
-typedef std::vector<FilterPointer>::const_iterator StackIterator;
+typedef std::vector<Filter::Pointer>::const_iterator StackIterator;
 
 class StackViewFilter : public Filter {
 public:
@@ -37,7 +37,7 @@ public:
         if (! next_range.has_value() || next.empty()) {
             return next_range;
         } else {
-            return next.next_range(next_range->start());
+            return next.next_range(next_range->start() - Duration(1));
         }
     }
 
@@ -65,7 +65,7 @@ public:
         return _iter == _end;
     }
 
-    const FilterPointer car() const {
+    const Filter::Pointer car() const {
         return *_iter;
     }
 
@@ -91,7 +91,8 @@ public:
         return view().prev_range(pivot);
     }
 
-    StackFilter& push(FilterPointer filter) {
+    StackFilter& push(Filter::Pointer filter) {
+        filter->validate_stack(gen::wrap(_stack.begin(), _stack.end()));
         _stack.push_back(filter);
         return *this;
     }
@@ -101,7 +102,7 @@ private:
         return StackViewFilter(_stack.begin(), _stack.end());
     }
 
-    std::vector<FilterPointer> _stack;
+    std::vector<Filter::Pointer> _stack;
 };
 
 }

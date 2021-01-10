@@ -54,6 +54,10 @@ public:
         return Range::for_days(date, 1);
     }
 
+    int order() const override {
+        return 3;
+    }
+
 private:
     std::set<Weekday> _weekdays;
 };

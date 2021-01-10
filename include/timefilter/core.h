@@ -11,6 +11,7 @@
 #define __TIMEFILTER_CORE_H
 
 #include "tinyformat/tinyformat.h"
+#include "moonlight/generator.h"
 #include "moonlight/exceptions.h"
 #include "moonlight/maps.h"
 #include <map>
@@ -20,6 +21,8 @@
 #include <memory>
 
 namespace timefilter {
+
+namespace gen = moonlight::gen;
 
 const std::string DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S";
 
@@ -857,6 +860,8 @@ enum class FilterType {
 // --------------------------------------------------------
 class Filter : public std::enable_shared_from_this<Filter> {
 public:
+    typedef std::shared_ptr<Filter> Pointer;
+
     Filter(FilterType type) : _type(type) { }
     virtual ~Filter() {  }
 
@@ -883,6 +888,18 @@ public:
     virtual std::optional<Range> next_range(const Datetime& pivot) const = 0;
     virtual std::optional<Range> prev_range(const Datetime& pivot) const = 0;
 
+    virtual int order() const {
+        return 0;
+    }
+
+    virtual void validate_stack(const gen::Iterator<Pointer>& iter) const {
+        for (auto it = iter; it != gen::end<Pointer>(); it++) {
+            if ((*it)->order() >= order()) {
+                throw ValueError(tfm::format("%s is of equal or higher order than %s and can't be included in the same filter stack.", (*it)->type_name(), type_name()));
+            }
+        }
+    }
+
     virtual bool should_clip() const {
         return true;
     }
@@ -890,8 +907,6 @@ public:
 private:
     FilterType _type;
 };
-
-typedef std::shared_ptr<Filter> FilterPointer;
 
 }
 

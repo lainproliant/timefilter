@@ -34,6 +34,10 @@ public:
         return range(pivot.zone());
     }
 
+    int order() const override {
+        return 1;
+    }
+
 private:
     Range range(const Zone& zone) const {
         return Range(

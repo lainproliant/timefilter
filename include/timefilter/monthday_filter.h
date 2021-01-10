@@ -50,6 +50,10 @@ public:
         return Range::for_days(monthday, 1);
     }
 
+    int order() const override {
+        return 3;
+    }
+
 private:
     void validate() {
         for (int day : _days) {

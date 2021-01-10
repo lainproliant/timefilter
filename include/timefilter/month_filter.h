@@ -58,6 +58,10 @@ public:
         return range(date, pivot.zone());
     }
 
+    int order() const override {
+        return 2;
+    }
+
 private:
     Range range(const Date& month_start, const Zone& zone) const {
         return Range(

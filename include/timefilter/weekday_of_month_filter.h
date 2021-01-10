@@ -46,6 +46,10 @@ public:
         return Range::for_days(month_weekday.value(), 1);
     }
 
+    int order() const override {
+        return 3;
+    }
+
 private:
     void validate() const {
         if (_offset < -5 || _offset > 5 || _offset == 0) {

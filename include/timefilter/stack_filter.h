@@ -25,19 +25,41 @@ public:
         if (empty()) return {};
 
         auto next = cdr();
-        auto range = car()->prev_range(pivot);
-        if (range.has_value() && ! next.empty() && range->contains(pivot)) {
-            auto next_range = next.next_range(pivot);
-            if (next_range.has_value() && range->contains(next_range->start())) {
-                return next_range;
-            }
-        }
+        auto date = pivot;
 
-        auto next_range = car()->next_range(pivot);
-        if (! next_range.has_value() || next.empty()) {
-            return next_range;
-        } else {
-            return next.next_range(next_range->start() - Duration(1));
+        for (;;) {
+            auto back_range = car()->prev_range(date);
+            if (back_range.has_value() && back_range->contains(date) && ! next.empty()) {
+                auto step_range = next.next_range(date);
+                if (step_range.has_value() && back_range->contains(step_range->start())) {
+                    return step_range;
+                }
+            }
+
+            auto range = car()->next_range(date);
+            if (range.has_value() && ! next.empty()) {
+                // TODO
+            } else {
+                return range;
+            }
+
+            if (range.has_value()) {
+                auto next_date = std::max(date, range->start());
+                if (! next.empty()) {
+                    auto step_range = next.next_range(range->start());
+                    if (step_range.has_value()) {
+                        return step_range;
+                    }
+
+                } else {
+                    return range;
+                }
+
+                date = range->end();
+
+            } else {
+                return {};
+            }
         }
     }
 
@@ -45,20 +67,27 @@ public:
         if (empty()) return {};
 
         auto next = cdr();
-        auto range = car()->prev_range(pivot);
+        auto date = pivot;
 
-        if (range.has_value()) {
-            if (! next.empty()) {
-                auto deep_range = next.prev_range(pivot);
-                if (deep_range.has_value()) {
-                    return deep_range;
-                } else {
-                    return prev_range(range->start());
-                }
-            }
+        for (;;) {
+            auto range = car()->prev_range(date);
+
         }
 
-        return range;
+        for (;;) {
+            auto range = car()->prev_range(pivot);
+
+            if (range.has_value() && ! next.empty() && range->contains(pivot)) {
+                auto next_pivot = std::min(pivot, range->end());
+                auto next_range = next.prev_range(next_pivot);
+                if (next_range.has_value() && range->contains(next_range->start())) {
+                    return next_range;
+                }
+            }
+
+            return range;
+
+        }
     }
 
     bool empty() const {

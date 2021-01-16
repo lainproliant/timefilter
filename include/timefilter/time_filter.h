@@ -87,7 +87,7 @@ private:
             if (iter != daytimes.end()) {
                 return *iter;
             }
-            date = Datetime(date.date().recede_days(1), pivot.zone());
+            date = Datetime(date.date().recede_days(1), pivot.zone()).with_time(Time::end_of_day());
         }
     }
 

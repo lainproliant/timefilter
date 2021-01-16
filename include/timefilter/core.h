@@ -495,6 +495,17 @@ private:
 class Time {
 public:
     Time() : Time(0, 0) { }
+
+    static const Time& end_of_day() {
+        static Time value(23, 59);
+        return value;
+    }
+
+    static const Time& start_of_day() {
+        static Time value(0, 0);
+        return value;
+    }
+
     Time(int hour, int minute) : _minutes(hour * 60 + minute) {
         validate();
     }

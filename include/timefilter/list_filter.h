@@ -1,5 +1,5 @@
 /*
- * stack_filter.h
+ * list_filter.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
  * Date: Wednesday January 6, 2021
@@ -7,19 +7,19 @@
  * Distributed under terms of the MIT license.
  */
 
-#ifndef __TIMEFILTER_STACK_FILTER_H
-#define __TIMEFILTER_STACK_FILTER_H
+#ifndef __TIMEFILTER_LIST_FILTER_H
+#define __TIMEFILTER_LIST_FILTER_H
 
 #include "timefilter/core.h"
 
 namespace timefilter {
 
 // ------------------------------------------------------------------
-typedef std::vector<Filter::Pointer>::const_iterator StackIterator;
+typedef std::vector<Filter::Pointer>::const_iterator ListIterator;
 
-class StackViewFilter : public Filter {
+class ListViewFilter : public Filter {
 public:
-    StackViewFilter(StackIterator iter, StackIterator end) : Filter(FilterType::Stack), _iter(iter), _end(end) { }
+    ListViewFilter(ListIterator iter, ListIterator end) : Filter(FilterType::List), _iter(iter), _end(end) { }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
         if (empty()) return {};
@@ -37,17 +37,10 @@ public:
             }
 
             auto range = car()->next_range(date);
-            if (range.has_value() && ! next.empty()) {
-                // TODO
-            } else {
-                return range;
-            }
-
             if (range.has_value()) {
-                auto next_date = std::max(date, range->start());
                 if (! next.empty()) {
                     auto step_range = next.next_range(range->start());
-                    if (step_range.has_value()) {
+                    if (step_range.has_value() && range->contains(step_range->start())) {
                         return step_range;
                     }
 
@@ -71,22 +64,23 @@ public:
 
         for (;;) {
             auto range = car()->prev_range(date);
+            if (range.has_value()) {
+                if (! next.empty()) {
+                    auto back_date = std::max(range->start(), date);
+                    auto step_range = next.prev_range(back_date);
+                    if (step_range.has_value() && range->contains(step_range->start())) {
+                        return step_range;
+                    }
 
-        }
-
-        for (;;) {
-            auto range = car()->prev_range(pivot);
-
-            if (range.has_value() && ! next.empty() && range->contains(pivot)) {
-                auto next_pivot = std::min(pivot, range->end());
-                auto next_range = next.prev_range(next_pivot);
-                if (next_range.has_value() && range->contains(next_range->start())) {
-                    return next_range;
+                } else {
+                    return range;
                 }
+
+                date = range->start() - Duration(1);
+
+            } else {
+                return {};
             }
-
-            return range;
-
         }
     }
 
@@ -98,19 +92,19 @@ public:
         return *_iter;
     }
 
-    StackViewFilter cdr() const {
-        return StackViewFilter(std::next(_iter), _end);
+    ListViewFilter cdr() const {
+        return ListViewFilter(std::next(_iter), _end);
     }
 
 private:
-    StackIterator _iter;
-    StackIterator _end;
+    ListIterator _iter;
+    ListIterator _end;
 };
 
 // ------------------------------------------------------------------
-class StackFilter : public Filter {
+class ListFilter : public Filter {
 public:
-    StackFilter() : Filter(FilterType::Stack) { }
+    ListFilter() : Filter(FilterType::List) { }
 
     std::optional<Range> next_range(const Datetime& pivot) const {
         return view().next_range(pivot);
@@ -120,15 +114,15 @@ public:
         return view().prev_range(pivot);
     }
 
-    StackFilter& push(Filter::Pointer filter) {
+    ListFilter& push(Filter::Pointer filter) {
         filter->validate_stack(gen::wrap(_stack.begin(), _stack.end()));
         _stack.push_back(filter);
         return *this;
     }
 
 private:
-    StackViewFilter view() const {
-        return StackViewFilter(_stack.begin(), _stack.end());
+    ListViewFilter view() const {
+        return ListViewFilter(_stack.begin(), _stack.end());
     }
 
     std::vector<Filter::Pointer> _stack;
@@ -136,4 +130,4 @@ private:
 
 }
 
-#endif /* !__TIMEFILTER_STACK_FILTER_H */
+#endif /* !__TIMEFILTER_LIST_FILTER_H */

@@ -54,6 +54,13 @@ public:
         return 3;
     }
 
+protected:
+    std::string _repr() const override {
+        std::vector<int> monthdays(_days.begin(), _days.end());
+        std::sort(monthdays.begin(), monthdays.end());
+        return moonlight::str::join(monthdays, ", ");
+    }
+
 private:
     void validate() {
         for (int day : _days) {

@@ -61,27 +61,34 @@ public:
 
         auto next = cdr();
         auto date = pivot;
+        std::optional<Range> result;
 
         for (;;) {
             auto range = car()->prev_range(date);
+
             if (range.has_value()) {
                 if (! next.empty()) {
-                    auto back_date = std::max(range->start(), date);
-                    auto step_range = next.prev_range(back_date);
+                    auto step_date = std::min(range->end(), date);
+                    auto step_range = next.prev_range(step_date);
                     if (step_range.has_value() && range->contains(step_range->start())) {
-                        return step_range;
+                        result = step_range;
+                        break;
                     }
 
                 } else {
-                    return range;
+                    result = range;
+                    break;
                 }
 
                 date = range->start() - Duration(1);
 
             } else {
-                return {};
+                result = {};
+                break;
             }
         }
+
+        return result;
     }
 
     bool empty() const {
@@ -96,6 +103,15 @@ public:
         return ListViewFilter(std::next(_iter), _end);
     }
 
+protected:
+    std::string _repr() const override {
+        std::vector<std::string> reprs;
+        std::transform(_iter, _end, std::back_inserter(reprs), [](auto p) {
+            return p->repr();
+        });
+        return moonlight::str::join(reprs, ", ");
+    }
+
 private:
     ListIterator _iter;
     ListIterator _end;
@@ -106,11 +122,11 @@ class ListFilter : public Filter {
 public:
     ListFilter() : Filter(FilterType::List) { }
 
-    std::optional<Range> next_range(const Datetime& pivot) const {
+    std::optional<Range> next_range(const Datetime& pivot) const override {
         return view().next_range(pivot);
     }
 
-    std::optional<Range> prev_range(const Datetime& pivot) const {
+    std::optional<Range> prev_range(const Datetime& pivot) const override {
         return view().prev_range(pivot);
     }
 
@@ -118,6 +134,15 @@ public:
         filter->validate_stack(gen::wrap(_stack.begin(), _stack.end()));
         _stack.push_back(filter);
         return *this;
+    }
+
+protected:
+    std::string _repr() const override {
+        std::vector<std::string> reprs;
+        std::transform(_stack.begin(), _stack.end(), std::back_inserter(reprs), [](auto p) {
+            return p->repr();
+        });
+        return moonlight::str::join(reprs, ", ");
     }
 
 private:

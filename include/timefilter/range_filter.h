@@ -40,6 +40,11 @@ public:
         return {};
     }
 
+protected:
+    std::string _repr() const override {
+        return tfm::format("%s", _range);
+    }
+
 private:
     Range _range;
 };

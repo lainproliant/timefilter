@@ -62,6 +62,16 @@ public:
         return 2;
     }
 
+protected:
+    std::string _repr() const override {
+        std::vector<int> nmonths;
+        std::transform(_months.begin(), _months.end(), std::back_inserter(nmonths), [](auto m) {
+            return static_cast<int>(m);
+        });
+        std::sort(nmonths.begin(), nmonths.end());
+        return moonlight::str::join(nmonths, ", ");
+    }
+
 private:
     Range range(const Date& month_start, const Zone& zone) const {
         return Range(

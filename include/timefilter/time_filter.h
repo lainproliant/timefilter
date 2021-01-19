@@ -50,6 +50,13 @@ public:
         return 4;
     }
 
+protected:
+    std::string _repr() const override {
+        std::vector<Time> times(_times.begin(), _times.end());
+        std::sort(times.begin(), times.end());
+        return moonlight::str::join(times, ", ");
+    }
+
 private:
     std::vector<Datetime> get_times_for_day(const Date& pivot) const {
         std::vector<Datetime> daytimes;

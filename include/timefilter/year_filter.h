@@ -38,6 +38,11 @@ public:
         return 1;
     }
 
+protected:
+    std::string _repr() const override {
+        return tfm::format("%d", _year);
+    }
+
 private:
     Range range(const Zone& zone) const {
         return Range(

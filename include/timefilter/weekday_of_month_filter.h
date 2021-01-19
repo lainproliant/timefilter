@@ -50,6 +50,11 @@ public:
         return 3;
     }
 
+protected:
+    std::string _repr() const override {
+        return tfm::format("%d:%d", _offset, static_cast<int>(_weekday));
+    }
+
 private:
     void validate() const {
         if (_offset < -5 || _offset > 5 || _offset == 0) {

@@ -915,6 +915,20 @@ public:
         return true;
     }
 
+    std::string repr() const {
+        return tfm::format("%s<%s>", type_name(), _repr());
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const Filter& filter) {
+        out << filter.repr();
+        return out;
+    }
+
+protected:
+    virtual std::string _repr() const {
+        return "";
+    }
+
 private:
     FilterType _type;
 };

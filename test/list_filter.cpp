@@ -1,5 +1,5 @@
 /*
- * stack_filter.cpp
+ * list_filter.cpp
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
  * Date: Wednesday January 6, 2021
@@ -7,7 +7,7 @@
  * Distributed under terms of the MIT license.
  */
 #include "moonlight/test.h"
-#include "timefilter/stack_filter.h"
+#include "timefilter/list_filter.h"
 #include "timefilter/month_filter.h"
 #include "timefilter/weekday_filter.h"
 #include "timefilter/weekday_of_month_filter.h"
@@ -20,7 +20,7 @@ using namespace moonlight;
 using namespace moonlight::test;
 
 int main() {
-    return TestSuite("timefilter stack_filter tests")
+    return TestSuite("timefilter list_filter tests")
     .test("next_range()", [&]() {
         Datetime dtA(2021, Month::January, 6);
         Datetime dtB(2020, Month::June, 8);
@@ -36,12 +36,12 @@ int main() {
         std::cout << "dtE = " << dtE << std::endl;
         std::cout << "dtF = " << dtF << std::endl;
 
-        auto filterA = StackFilter()
+        auto filterA = ListFilter()
             .push(MonthFilter::create(Month::December))
             .push(WeekdayFilter::create(Weekday::Monday, Weekday::Wednesday, Weekday::Friday))
             .push(TimeFilter::create(Time(12, 15)));
 
-        auto filterB = StackFilter()
+        auto filterB = ListFilter()
             .push(MonthFilter::create(Month::January, Month::June))
             .push(WeekdayOfMonthFilter::create(Weekday::Sunday, -1))
             .push(TimeFilter::create(Time(10, 30)));
@@ -146,12 +146,12 @@ int main() {
         std::cout << "dtE = " << dtE << std::endl;
         std::cout << "dtF = " << dtF << std::endl;
 
-        auto filterA = StackFilter()
+        auto filterA = ListFilter()
             .push(MonthFilter::create(Month::December))
             .push(WeekdayFilter::create(Weekday::Monday, Weekday::Wednesday, Weekday::Friday))
             .push(TimeFilter::create(Time(12, 15)));
 
-        auto filterB = StackFilter()
+        auto filterB = ListFilter()
             .push(MonthFilter::create(Month::January, Month::June))
             .push(WeekdayOfMonthFilter::create(Weekday::Sunday, -1))
             .push(TimeFilter::create(Time(10, 30)));

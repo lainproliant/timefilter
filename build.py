@@ -14,7 +14,8 @@ from xeno.build import Recipe, build, default, provide, sh, target, recipe
 
 INCLUDES = [
     "-I./include",
-    "-I./moonlight/include"
+    "-I./moonlight/include",
+    "-I./jotdown/include"
 ]
 
 ENV = dict(

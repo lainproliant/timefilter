@@ -1,3 +1,6 @@
 [submodule "moonlight"]
 	path = moonlight
 	url = https://github.com/lainproliant/moonlight
+[submodule "jotdown"]
+	path = jotdown
+	url = https://github.com/lainproliant/jotdown

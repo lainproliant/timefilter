@@ -8,7 +8,7 @@ def relative(filename):
 
 
 # --------------------------------------------------------------------
-INCLUDES = [".", "./include", "./moonlight/include", "./jotdown/include"]
+INCLUDES = [".", "./include", "./moonlight/include", "./jotdown/include", "./date/include"]
 
 # --------------------------------------------------------------------
 FLAGS = [

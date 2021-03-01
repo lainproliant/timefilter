@@ -18,6 +18,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
 #include <memory>
 
 namespace timefilter {

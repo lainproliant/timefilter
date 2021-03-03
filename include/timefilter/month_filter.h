@@ -66,7 +66,7 @@ protected:
     std::string _repr() const override {
         std::vector<int> nmonths;
         std::transform(_months.begin(), _months.end(), std::back_inserter(nmonths), [](auto m) {
-            return static_cast<int>(m);
+            return static_cast<unsigned>(m);
         });
         std::sort(nmonths.begin(), nmonths.end());
         return moonlight::str::join(nmonths, ", ");

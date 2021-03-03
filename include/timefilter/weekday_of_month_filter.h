@@ -52,7 +52,7 @@ public:
 
 protected:
     std::string _repr() const override {
-        return tfm::format("%d:%d", _offset, static_cast<int>(_weekday));
+        return tfm::format("%d:%d", _offset, _weekday.c_encoding());
     }
 
 private:

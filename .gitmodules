@@ -4,3 +4,6 @@
 [submodule "jotdown"]
 	path = jotdown
 	url = https://github.com/lainproliant/jotdown
+[submodule "date"]
+	path = date
+	url = https://github.com/HowardHinnant/date

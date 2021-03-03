@@ -62,7 +62,7 @@ protected:
     std::string _repr() const override {
         std::vector<int> nweekdays;
         std::transform(_weekdays.begin(), _weekdays.end(), std::back_inserter(nweekdays), [](auto wd) {
-            return static_cast<int>(wd);
+            return wd.c_encoding();
         });
         std::sort(nweekdays.begin(), nweekdays.end());
         return moonlight::str::join(nweekdays, ", ");

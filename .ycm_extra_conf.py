@@ -8,7 +8,8 @@ def relative(filename):
 
 
 # --------------------------------------------------------------------
-INCLUDES = [".", "./include", "./moonlight/include", "./jotdown/include", "./date/include"]
+INCLUDES = [".", "./include", "./moonlight/include", "./jotdown/include",
+            "./date/include"]
 
 # --------------------------------------------------------------------
 FLAGS = [
@@ -19,7 +20,7 @@ FLAGS = [
     "-ferror-limit=10000",
     "-DNDEBUG",
     "-DUSE_CLANG_COMPLETER",
-    "-std=c++2a",
+    "-std=c++20",
     "-xc++",
 ]
 

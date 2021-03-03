@@ -14,6 +14,8 @@
 #include "moonlight/generator.h"
 #include "moonlight/exceptions.h"
 #include "moonlight/maps.h"
+#include "date/date.h"
+#include "date/tz.h"
 #include <map>
 #include <ctime>
 #include <cstdlib>
@@ -25,7 +27,14 @@ namespace timefilter {
 
 namespace gen = moonlight::gen;
 
+// --------------------------------------------------------
 const std::string DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S";
+typedef std::chrono::seconds Duration;
+typedef date::days Days;
+typedef date::month Month;
+typedef date::zoned_time<Duration, const date::time_zone*> ZonedDuration;
+typedef date::hh_mm_ss<Duration> Time;
+typedef date::year_month_day Date;
 
 // --------------------------------------------------------
 class ValueError : public moonlight::core::Exception {
@@ -33,668 +42,123 @@ class ValueError : public moonlight::core::Exception {
 };
 
 // --------------------------------------------------------
-enum class Month {
-    January,
-    February,
-    March,
-    April,
-    May,
-    June,
-    July,
-    August,
-    September,
-    October,
-    November,
-    December
-};
-
-// --------------------------------------------------------
-enum class Weekday {
-    Sunday,
-    Monday,
-    Tuesday,
-    Wednesday,
-    Thursday,
-    Friday,
-    Saturday
-};
-
-// --------------------------------------------------------
-inline int last_day_of_month(int year, Month month) {
-    switch(month) {
-    case Month::April:
-    case Month::June:
-    case Month::November:
-    case Month::September:
-        return 30;
-
-    case Month::January:
-    case Month::March:
-    case Month::May:
-    case Month::July:
-    case Month::August:
-    case Month::October:
-    case Month::December:
-        return 31;
-
-    case Month::February:
-        return ((!(year % 4) && year % 100) || !(year % 400)) ? 29 : 28;
-    }
+inline const date::time_zone* zone_or_utc(const date::time_zone* z) {
+    static auto tz_utc = date::locate_zone("UTC");
+    return z == nullptr ? tz_utc : z;
 }
 
 // --------------------------------------------------------
-class Zone {
-public:
-    Zone(const std::string& tz_name) : _tz_name(tz_name) { }
-
-    static Zone local() {
-        return Zone();
-    }
-
-    std::string name(bool is_dst = false) const {
-        auto env_tz = Zone::get_env_tz();
-        set_env_tz(_tz_name);
-        std::string sys_tz_name(tzname[is_dst ? 1 : 0]);
-        set_env_tz(env_tz);
-        return sys_tz_name;
-    }
-
-    struct tm mk_struct_tm(time_t utime) const {
-        struct tm local_time;
-        auto env_tz = Zone::get_env_tz();
-        set_env_tz(_tz_name);
-        local_time = *localtime(&utime);
-        set_env_tz(env_tz);
-        return local_time;
-    }
-
-    time_t mk_timestamp(struct tm local_time) const {
-        auto env_tz = get_env_tz();
-        set_env_tz(_tz_name);
-        time_t utime = mktime(&local_time);
-        set_env_tz(env_tz);
-        return utime;
-    }
-
-    std::string strftime(const std::string& format, struct tm local_time) const {
-        auto env_tz = get_env_tz();
-        set_env_tz(_tz_name);
-        const int bufsize = 1024;
-        char buffer[bufsize];
-        ::strftime(buffer, bufsize, format.c_str(), &local_time);
-        std::string result(buffer);
-        set_env_tz(env_tz);
-        return result;
-    }
-
-private:
-    Zone() : _tz_name({}) { }
-
-    static std::optional<std::string> get_env_tz() {
-        char* result = getenv("TZ");
-        if (result == nullptr) {
-            return {};
-        }
-        return result;
-    }
-
-    static void set_env_tz(const std::optional<std::string>& tz_name = {}) {
-        if (tz_name.has_value()) {
-            auto env = tfm::format("TZ=%s", tz_name.value());
-            putenv(strdup(env.c_str()));
-        } else {
-            unsetenv("TZ");
-        }
-        tzset();
-    }
-
-    std::optional<std::string> _tz_name;
-};
-
-const Zone UTC = Zone("UTC");
-const Zone LOCAL = Zone::local();
+inline ZonedDuration now(const date::time_zone* tz_in = nullptr) {
+    auto tz = zone_or_utc(tz_in);
+    return date::make_zoned(tz, date::floor<Duration>(std::chrono::system_clock::now()));
+}
 
 // --------------------------------------------------------
-class Duration {
-public:
-    Duration() : _minutes(0) { }
-    Duration(int minutes) : _minutes(minutes) { }
-    Duration(int hours, int minutes) : Duration(hours * 60 + minutes) { }
-    Duration(int days, int hours, int minutes) : Duration(days * 24 + hours, minutes) { }
-
-    static Duration of_minutes(int minutes) {
-        return Duration(minutes);
-    }
-
-    static Duration of_hours(int hours) {
-        return Duration(hours, 0);
-    }
-
-    static Duration of_days(int days) {
-        return Duration(days, 0, 0);
-    }
-
-    int days() const {
-        return total_hours() / 24;
-    }
-
-    int total_hours() const {
-        return total_minutes() / 60;
-    }
-
-    int hours() const {
-        return total_hours() % 24;
-    }
-
-    int total_minutes() const {
-        return _minutes;
-    }
-
-    int minutes() const {
-        return _minutes % 60;
-    }
-
-    Duration with_days(int days) const {
-        return Duration(days, hours(), minutes());
-    }
-
-    Duration with_hours(int hours) const {
-        return Duration(days(), hours, minutes());
-    }
-
-    Duration with_minutes(int minutes) const {
-        return Duration(days(), hours(), minutes);
-    }
-
-    Duration operator+(const Duration& rhs) const {
-        return Duration(_minutes + rhs._minutes);
-    }
-
-    Duration operator-(const Duration& rhs) const {
-        return Duration(_minutes - rhs._minutes);
-    }
-
-    bool operator<(const Duration& rhs) const {
-        return _minutes < rhs._minutes;
-    }
-
-    bool operator>(const Duration& rhs) const {
-        return (! (*this < rhs)) && (! (*this == rhs));
-    }
-
-    bool operator<=(const Duration& rhs) const {
-        return (*this < rhs) || (*this == rhs);
-    }
-
-    bool operator>=(const Duration& rhs) const {
-        return (! (*this < rhs) || (*this == rhs));
-    }
-
-    bool operator==(const Duration& rhs) const {
-        return _minutes == rhs._minutes;
-    }
-
-    bool operator!=(const Duration& rhs) const {
-        return ! (*this == rhs);
-    }
-
-    friend std::ostream& operator<<(std::ostream& out, const Duration& duration) {
-        tfm::format(out, "Duration<%dd %02d:%02d>",
-                    duration.days(),
-                    duration.hours(),
-                    duration.minutes());
-        return out;
-    }
-
-private:
-    int _minutes;
-};
+inline unsigned int timestamp(const ZonedDuration& d) {
+    return d.get_local_time().time_since_epoch().count();
+}
 
 // --------------------------------------------------------
-class Date {
-public:
-    /**
-     * Create a date at the UNIX Epoch.
-     */
-    Date() : Date(1970, Month::January, 1) { }
-
-    /**
-     * Create a date at the start of the given month.
-     */
-    Date(int year, Month month) : Date(year, month, 1) { }
-
-    /**
-     * Throws ValueError if the date is invalid.
-     */
-    Date(int year, Month month, int day) : _year(year), _month(month), _day(day) {
-        validate();
-    }
-
-    /**
-     * Advance forward the given number of calendar days.
-     */
-    Date advance_days(int days) const {
-        Date date = *this;
-
-        for (int x = 0; x < days; x++) {
-            if (date == end_of_month()) {
-                date = date.next_month();
-            } else {
-                date = date.with_day(date.day() + 1);
-            }
-        }
-
-        return date;
-    }
-
-    /**
-     * Recede backward the given number of calendar days.
-     */
-    Date recede_days(int days) const {
-        Date date = *this;
-
-        for (int x = 0; x < days; x++) {
-            if (date == start_of_month()) {
-                date = date.prev_month().end_of_month();
-            } else {
-                date = date.with_day(date.day() - 1);
-            }
-        }
-
-        return date;
-    }
-
-    /**
-     * Implements Zeller's rule to determine the weekday.
-     */
-    Weekday weekday() const {
-        int adjustment, mm, yy;
-
-        adjustment = (14 - nmonth()) / 12;
-        mm = nmonth() + 12 * adjustment - 2;
-        yy = year() - adjustment;
-        return static_cast<Weekday>(
-            ((day() + (13 * mm - 1) / 5 +
-              yy + yy / 4 - yy / 100 + yy / 400) % 7));
-    }
-
-    int nweekday() const {
-        return static_cast<int>(weekday());
-    }
-
-    int year() const {
-        return _year;
-    }
-
-    Month month() const {
-        return _month;
-    }
-
-    int nmonth() const {
-        return static_cast<int>(month()) + 1;
-    }
-
-    int day() const {
-        return _day;
-    }
-
-    /**
-     * Throws ValueError if the date is invalid.
-     */
-    Date with_year(int year) const {
-        return Date(year, month(), day());
-    }
-
-    /**
-     * Throws ValueError if the date is invalid.
-     */
-    Date with_month(Month month) const {
-        return Date(year(), month, day());
-    }
-
-    /**
-     * Throws ValueError if the date is invalid or the month is out of range.
-     */
-    Date with_nmonth(int nmonth) const {
-        if (nmonth < 1 || nmonth > 12) {
-            throw ValueError("Numeric month value is out of range (1-12).");
-        }
-
-        return with_month(static_cast<Month>(nmonth - 1));
-    }
-
-    /**
-     * Throws ValueError if the date is invalid.
-     */
-    Date with_day(int day) const {
-        return Date(year(), month(), day);
-    }
-
-    /**
-     * Advance to the first day of this date's next month.
-     */
-    Date next_month() const {
-        Date date = with_day(1);
-
-        if (month() == Month::December) {
-            date = date.with_year(date.year() + 1).with_month(Month::January);
-        } else {
-            date = date.with_nmonth(nmonth() + 1);
-        }
-
-        return date;
-    }
-
-    /**
-     * Recede to the first day of this date's last month.
-     */
-    Date prev_month() const {
-        Date date = with_day(1);
-
-        if (month() == Month::January) {
-            date = date.with_year(date.year() - 1).with_month(Month::December);
-        } else {
-            date = date.with_nmonth(nmonth() - 1);
-        }
-
-        return date;
-    }
-
-    /**
-     * Advance to the last day of this date's month.
-     */
-    Date end_of_month() const {
-        return with_day(last_day_of_month(year(), month()));
-    }
-
-    /**
-     * Revert back to the first day of this date's month.
-     */
-    Date start_of_month() const {
-        return with_day(1);
-    }
-
-    bool operator<(const Date& rhs) const {
-        if (year() == rhs.year()) {
-            if (month() == rhs.month()) {
-                return day() < rhs.day();
-            }
-            return month() < rhs.month();
-        }
-        return year() < rhs.year();
-    }
-
-    bool operator>(const Date& rhs) const {
-        return (! (*this < rhs)) && (! (*this == rhs));
-    }
-
-    bool operator<=(const Date& rhs) const {
-        return (*this < rhs) || (*this == rhs);
-    }
-
-    bool operator>=(const Date& rhs) const {
-        return (! (*this < rhs) || (*this == rhs));
-    }
-
-    bool operator==(const Date& rhs) const {
-        return (year() == rhs.year() &&
-                month() == rhs.month() &&
-                day() == rhs.day());
-    }
-
-    bool operator!=(const Date& rhs) const {
-        return ! (*this == rhs);
-    }
-
-    Date& operator++() {
-        *this = advance_days(1);
-        return *this;
-    }
-
-    Date operator++(int) {
-        Date date = *this;
-        *this = advance_days(1);
-        return date;
-    }
-
-    Date& operator--() {
-        *this = recede_days(1);
-        return *this;
-    }
-
-    Date operator--(int) {
-        Date date = *this;
-        *this = recede_days(1);
-        return date;
-    }
-
-    friend std::ostream& operator<<(std::ostream& out, const Date& date) {
-        tfm::format(out, "Date<%04d-%02d-%02d>",
-                    date.year(),
-                    date.nmonth(),
-                    date.day());
-        return out;
-    }
-
-private:
-    void validate() {
-        if (day() < 1) {
-            throw ValueError("Day is out of range (less than 1).");
-        }
-
-        if (day() > last_day_of_month(year(), month())) {
-            throw ValueError("Day is out of range (greater than last day of month).");
-        }
-    }
-
-    int _year;
-    Month _month;
-    int _day;
-};
-
-// --------------------------------------------------------
-class Time {
-public:
-    Time() : Time(0, 0) { }
-
-    static const Time& end_of_day() {
-        static Time value(23, 59);
-        return value;
-    }
-
-    static const Time& start_of_day() {
-        static Time value(0, 0);
-        return value;
-    }
-
-    Time(int hour, int minute) : _minutes(hour * 60 + minute) {
-        validate();
-    }
-
-    int hour() const {
-        return _minutes / 60;
-    }
-
-    int minute() const {
-        return _minutes % 60;
-    }
-
-    Time with_hour(int hour) const {
-        return Time(hour, minute());
-    }
-
-    Time with_minute(int minute) const {
-        return Time(hour(), minute);
-    }
-
-    bool operator<(const Time& rhs) const {
-        return _minutes < rhs._minutes;
-    }
-
-    bool operator>(const Time& rhs) const {
-        return (! (*this < rhs)) && (! (*this == rhs));
-    }
-
-    bool operator<=(const Time& rhs) const {
-        return (*this < rhs) || (*this == rhs);
-    }
-
-    bool operator>=(const Time& rhs) const {
-        return (! (*this < rhs) || (*this == rhs));
-    }
-
-    bool operator==(const Time& rhs) const {
-        return _minutes == rhs._minutes;
-    }
-
-    bool operator!=(const Time& rhs) const {
-        return ! (*this == rhs);
-    }
-
-    friend std::ostream& operator<<(std::ostream& out, const Time& time) {
-        tfm::format(out, "Time<%02d:%02d>", time.hour(), time.minute());
-        return out;
-    }
-
-private:
-    void validate() {
-        if (_minutes < 0 || _minutes >= 60 * 24) {
-            throw ValueError("Time is out of range.");
-        }
-    }
-
-    int _minutes;
-};
+inline unsigned int timestamp() {
+    return timestamp(now());
+}
 
 // --------------------------------------------------------
 class Datetime {
 public:
-    Datetime() : _date(), _time(), _zone(UTC) { }
-    Datetime(const Zone& zone) : _date(), _time(), _zone(zone) { }
-    Datetime(const Date& date) : _date(date), _time(), _zone(UTC) { }
-    Datetime(const Date& date, const Zone& zone) : _date(date), _time(), _zone(zone) { }
-    Datetime(const Date& date, const Time& time) : _date(date), _time(time), _zone(UTC) { }
-    Datetime(const Date& date, const Time& time, const Zone& zone) : _date(date), _time(time), _zone(zone) { }
-    Datetime(int year, Month month) : _date(year, month), _time(), _zone(UTC) { }
-    Datetime(int year, Month month, const Zone& zone) : _date(year, month), _time(), _zone(zone) { }
-    Datetime(int year, Month month, int day) : _date(year, month, day), _time(), _zone(UTC) { }
-    Datetime(int year, Month month, int day, const Zone& zone) : _date(year, month, day), _time(), _zone(zone) { }
-    Datetime(int year, Month month, int day, int hour, int minute) : _date(year, month, day), _time(hour, minute), _zone(UTC) { }
-    Datetime(int year, Month month, int day, int hour, int minute, const Zone& zone) : _date(year, month, day), _time(hour, minute), _zone(zone) { }
+    Datetime(const date::time_zone* zone = nullptr) :
+    _dt(now(zone)) { }
 
-    Datetime(const struct tm& local_time, const Zone& zone) : _zone(zone) {
-        load_struct_tm(local_time);
+    Datetime(const ZonedDuration& dt) : _dt(dt) { }
+
+    Datetime(const Datetime& datetime) : _dt(datetime._dt) { }
+
+    Date date() const {
+        return Date{date::floor<Days>(_dt.get_local_time())};
     }
 
-    Datetime(const struct tm& local_time) : Datetime(local_time, UTC) {}
-
-    Datetime(time_t timestamp) : _zone(UTC) {
-        struct tm local_time = zone().mk_struct_tm(timestamp);
-        load_struct_tm(local_time);
-    }
-
-    static Datetime now() {
-        return Datetime(::time(nullptr));
-    }
-
-    static Datetime now(const Zone& zone) {
-        return now().at_zone(zone);
-    }
-
-    struct tm to_struct_tm() const {
-        return (struct tm) {
-            .tm_sec = 0,
-            .tm_min = time().minute(),
-            .tm_hour = time().hour(),
-            .tm_mday = date().day(),
-            .tm_mon = date().nmonth() - 1,
-            .tm_year = date().year() - 1900,
-            .tm_wday = date().nweekday(),
-            .tm_isdst = -1,
-        };
-    }
-
-    time_t to_timestamp() const {
-        return zone().mk_timestamp(to_struct_tm());
-    }
-
-    const Date& date() const {
-        return _date;
+    Time time() const {
+        auto local_time = _dt.get_local_time();
+        auto d = date::floor<Days>(local_time);
+        auto t = date::floor<Duration>(local_time) - d;
+        return Time{t};
     }
 
     int year() const {
-        return date().year();
+        return static_cast<int>(date().year());
     }
 
-    Month month() const {
+    date::month month() const {
         return date().month();
     }
 
-    int day() const {
-        return date().day();
+    unsigned int nmonth() const {
+        return static_cast<unsigned>(date().month());
     }
 
-    const Time& time() const {
-        return _time;
+    unsigned int day() const {
+        return static_cast<unsigned>(date().day());
     }
 
     int hour() const {
-        return time().hour();
+        return time().hours().count();
     }
 
     int minute() const {
-        return time().minute();
+        return time().minutes().count();
     }
 
-    const Zone& zone() const {
-        return _zone;
+    const date::time_zone* zone() const {
+        return _dt.get_time_zone();
     }
 
     Datetime with_date(const Date& date) const {
-        return Datetime(date, time(), zone());
+        auto tp = date::floor<Duration>(
+            date::local_days{date} + time().to_duration());
+        auto local_date = date::make_zoned(_dt.get_time_zone(), tp);
+        return Datetime(local_date);
     }
 
     Datetime with_year(int year) const {
-        return with_date(
-            date().with_year(year)
-        );
+        auto cd = date();
+        auto d = date::year_month_day(date::year(year), cd.month(), cd.day());
+        if (! d.ok()) {
+            throw ValueError(tfm::format("%s is an invalid date.", d));
+        }
+        return with_date(d);
     }
 
     Datetime with_month(Month month) const {
-        return with_date(
-            date().with_month(month)
-        );
+        auto cd = date();
+        auto d = date::year_month_day(cd.year(), month, cd.day());
+        if (! d.ok()) {
+            throw ValueError(tfm::format("%s is an invalid date.", d));
+        }
+        return with_date(d);
     }
 
-    Datetime with_day(int day) const {
-        return with_date(
-            date().with_day(day)
-        );
+    Datetime with_day(unsigned int day) const {
+        auto cd = date();
+        auto d = date::year_month_day(cd.year(), cd.month(), date::day{day});
+        if (! d.ok()) {
+            throw ValueError(tfm::format("%s is an invalid date.", d));
+        }
+        return with_date(d);
     }
 
     Datetime with_time(const Time& time) const {
-        return Datetime(date(), time, zone());
     }
 
     Datetime with_hour(int hour) const {
-        return with_time(
-            time().with_hour(hour)
-        );
     }
 
     Datetime with_minute(int minute) const {
-        return with_time(
-            time().with_minute(minute)
-        );
     }
 
     Datetime with_zone(const Zone& zone) const {
-        return Datetime(date(), time(), zone);
     }
 
     Datetime at_zone(const Zone& zone) const {
-        struct tm zoned_time = zone.mk_struct_tm(to_timestamp());
-        return Datetime(zoned_time, zone);
     }
 
     bool is_dst() const {
@@ -766,16 +230,7 @@ public:
     }
 
 private:
-    void load_struct_tm(struct tm local_time) {
-        _date = Date().with_year(local_time.tm_year + 1900)
-            .with_nmonth(local_time.tm_mon + 1)
-            .with_day(local_time.tm_mday);
-        _time = Time(local_time.tm_hour, local_time.tm_min);
-    }
-
-    Date _date;
-    Time _time;
-    Zone _zone;
+    const ZonedDuration _dt;
 };
 
 // --------------------------------------------------------

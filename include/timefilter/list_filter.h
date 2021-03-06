@@ -80,7 +80,7 @@ public:
                     break;
                 }
 
-                date = range->start() - Duration(1);
+                date = range->start() - minutes(1);
 
             } else {
                 result = {};

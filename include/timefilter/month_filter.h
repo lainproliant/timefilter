@@ -76,7 +76,7 @@ private:
     Range range(const Date& month_start, const Zone& zone) const {
         return Range(
             Datetime(month_start),
-            Datetime(month_start.next_month())).with_zone(zone);
+            Datetime(month_start.next_month())).zone(zone);
     }
 
     std::set<Month> _months;

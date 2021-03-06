@@ -68,17 +68,17 @@ private:
     }
 
     Datetime get_next_daytime(const Datetime& pivot) const {
-        Datetime date = pivot + Duration(1);
+        Datetime date = pivot + minutes(1);
 
         for (;;) {
             auto daytimes = get_times_for_day(date.date());
             auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
-                return dt > (date - Duration(1));
+                return dt > (date - minutes(1));
             });
             if (iter != daytimes.end()) {
                 return *iter;
             }
-            date = Datetime(date.date().advance_days(1), pivot.zone());
+            date = Datetime(pivot.zone(), date.date().advance_days(1));
         }
     }
 
@@ -94,15 +94,15 @@ private:
             if (iter != daytimes.end()) {
                 return *iter;
             }
-            date = Datetime(date.date().recede_days(1), pivot.zone()).with_time(Time::end_of_day());
+            date = Datetime(pivot.zone(), date.date().recede_days(1), Time::end_of_day());
         }
     }
 
     Range range(const Datetime& dt, const Zone& zone) const {
         return Range(
             dt,
-            dt + Duration(1)
-        ).with_zone(zone);
+            dt + minutes(1)
+        ).zone(zone);
     }
 
     std::set<Time> _times;

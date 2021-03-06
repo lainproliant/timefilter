@@ -17,7 +17,7 @@ using namespace moonlight;
 using namespace moonlight::test;
 
 int main() {
-    return TestSuite("timefilter weekday_of_month_tests")
+    return TestSuite("timefilter weekday_of_month_filter tests")
     .test("next_range()", [&]() {
         Datetime dtA = Datetime(2020, Month::January, 1);
         Datetime dtB = Datetime(2021, Month::January, 20);

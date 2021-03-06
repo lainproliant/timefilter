@@ -14,17 +14,24 @@
 #include "moonlight/generator.h"
 #include "moonlight/exceptions.h"
 #include "moonlight/maps.h"
+#include "date/date.h"
 #include <map>
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <chrono>
+
+#ifndef TIMEFILTER_TZ_UNSAFE
+#include <thread>
+#endif
 
 namespace timefilter {
 
 namespace gen = moonlight::gen;
 
-const std::string DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S";
+const std::string DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S %Z";
+typedef std::chrono::duration<long long, std::milli> Millis;
 
 // --------------------------------------------------------
 class ValueError : public moonlight::core::Exception {
@@ -86,11 +93,27 @@ class Zone {
 public:
     Zone(const std::string& tz_name) : _tz_name(tz_name) { }
 
-    static Zone local() {
-        return Zone();
+#ifndef TIMEFILTER_TZ_UNSAFE
+    static std::mutex& mutex() {
+        static std::mutex mutex;
+        return mutex;
+    }
+#endif
+
+    static const Zone& local() {
+        static Zone zone = Zone();
+        return zone;
+    }
+
+    static const Zone& utc() {
+        static Zone utc_zone = Zone("UTC");
+        return utc_zone;
     }
 
     std::string name(bool is_dst = false) const {
+#ifndef TIMEFILTER_TZ_UNSAFE
+        std::lock_guard<std::mutex> lock(mutex());
+#endif
         auto env_tz = Zone::get_env_tz();
         set_env_tz(_tz_name);
         std::string sys_tz_name(tzname[is_dst ? 1 : 0]);
@@ -98,7 +121,14 @@ public:
         return sys_tz_name;
     }
 
+    struct tm mk_struct_tm(Millis ms) const {
+        return mk_struct_tm(date::floor<std::chrono::seconds>(ms).count());
+    }
+
     struct tm mk_struct_tm(time_t utime) const {
+#ifndef TIMEFILTER_TZ_UNSAFE
+        std::lock_guard<std::mutex> lock(mutex());
+#endif
         struct tm local_time;
         auto env_tz = Zone::get_env_tz();
         set_env_tz(_tz_name);
@@ -108,6 +138,9 @@ public:
     }
 
     time_t mk_timestamp(struct tm local_time) const {
+#ifndef TIMEFILTER_TZ_UNSAFE
+        std::lock_guard<std::mutex> lock(mutex());
+#endif
         auto env_tz = get_env_tz();
         set_env_tz(_tz_name);
         time_t utime = mktime(&local_time);
@@ -116,10 +149,13 @@ public:
     }
 
     std::string strftime(const std::string& format, struct tm local_time) const {
+#ifndef TIMEFILTER_TZ_UNSAFE
+        std::lock_guard<std::mutex> lock(mutex());
+#endif
+        const int bufsize = 256;
+        static char buffer[bufsize];
         auto env_tz = get_env_tz();
         set_env_tz(_tz_name);
-        const int bufsize = 1024;
-        char buffer[bufsize];
         ::strftime(buffer, bufsize, format.c_str(), &local_time);
         std::string result(buffer);
         set_env_tz(env_tz);
@@ -150,104 +186,159 @@ private:
     std::optional<std::string> _tz_name;
 };
 
-const Zone UTC = Zone("UTC");
-const Zone LOCAL = Zone::local();
-
 // --------------------------------------------------------
 class Duration {
 public:
-    Duration() : _minutes(0) { }
-    Duration(int minutes) : _minutes(minutes) { }
-    Duration(int hours, int minutes) : Duration(hours * 60 + minutes) { }
-    Duration(int days, int hours, int minutes) : Duration(days * 24 + hours, minutes) { }
+    Duration() : _ms(0), _bk(breakdown()) { }
+    Duration(const Millis& ms) : _ms(ms), _bk(breakdown()) { }
+    Duration(const Duration& d) : _ms(d._ms), _bk(breakdown()) { }
 
-    static Duration of_minutes(int minutes) {
-        return Duration(minutes);
+    struct Breakdown {
+        int days;
+        int hours;
+        int minutes;
+        int seconds;
+        int millis;
+    };
+
+    static Duration of_days(int days) {
+        return Duration(date::floor<Millis>(date::days{days}));
     }
 
     static Duration of_hours(int hours) {
-        return Duration(hours, 0);
+        return Duration(date::floor<Millis>(std::chrono::hours{hours}));
     }
 
-    static Duration of_days(int days) {
-        return Duration(days, 0, 0);
+    static Duration of_minutes(int minutes) {
+        return Duration(date::floor<Millis>(std::chrono::minutes{minutes}));
+    }
+
+    static Duration of_seconds(int seconds) {
+        return Duration(date::floor<Millis>(std::chrono::seconds{seconds}));
+    }
+
+    int factor() const {
+        return _ms < Millis::zero() ? -1 : 1;
     }
 
     int days() const {
-        return total_hours() / 24;
-    }
-
-    int total_hours() const {
-        return total_minutes() / 60;
+        return factor() * _bk.days;
     }
 
     int hours() const {
-        return total_hours() % 24;
-    }
-
-    int total_minutes() const {
-        return _minutes;
+        return factor() * _bk.hours;
     }
 
     int minutes() const {
-        return _minutes % 60;
+        return factor() * _bk.minutes;
     }
 
-    Duration with_days(int days) const {
-        return Duration(days, hours(), minutes());
+    int seconds() const {
+        return factor() * _bk.seconds;
     }
 
-    Duration with_hours(int hours) const {
-        return Duration(days(), hours, minutes());
+    int millis() const {
+        return factor() * _bk.millis;
     }
 
-    Duration with_minutes(int minutes) const {
-        return Duration(days(), hours(), minutes);
+    const Breakdown& bk() const {
+        return _bk;
     }
 
-    Duration operator+(const Duration& rhs) const {
-        return Duration(_minutes + rhs._minutes);
+    const Millis& to_chrono_duration() const {
+        return _ms;
     }
 
-    Duration operator-(const Duration& rhs) const {
-        return Duration(_minutes - rhs._minutes);
+    Duration operator+(const Duration& d) const {
+        return Duration(_ms + d._ms);
     }
 
-    bool operator<(const Duration& rhs) const {
-        return _minutes < rhs._minutes;
+    Duration operator-(const Duration& d) const {
+        return Duration(_ms - d._ms);
     }
 
-    bool operator>(const Duration& rhs) const {
-        return (! (*this < rhs)) && (! (*this == rhs));
+    bool operator==(const Duration& d) const {
+        return _ms == d._ms;
     }
 
-    bool operator<=(const Duration& rhs) const {
-        return (*this < rhs) || (*this == rhs);
+    bool operator!=(const Duration& d) const {
+        return !(*this == d);
     }
 
-    bool operator>=(const Duration& rhs) const {
-        return (! (*this < rhs) || (*this == rhs));
+    bool operator>(const Duration& d) const {
+        return _ms > d._ms;
     }
 
-    bool operator==(const Duration& rhs) const {
-        return _minutes == rhs._minutes;
+    bool operator<(const Duration& d) const {
+        return _ms < d._ms;
     }
 
-    bool operator!=(const Duration& rhs) const {
-        return ! (*this == rhs);
+    bool operator>=(const Duration& d) const {
+        return (*this == d) || (*this > d);
     }
 
-    friend std::ostream& operator<<(std::ostream& out, const Duration& duration) {
-        tfm::format(out, "Duration<%dd %02d:%02d>",
-                    duration.days(),
-                    duration.hours(),
-                    duration.minutes());
+    bool operator<=(const Duration& d) const {
+        return (*this == d) || (*this < d);
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const Duration& d) {
+        out << "Duration<";
+        if (d.factor() < 0) {
+            out << "-";
+        }
+        tfm::format(out, "%dd%02d:%02d:%02d %03d>",
+                    abs(d.days()),
+                    abs(d.hours()),
+                    abs(d.minutes()),
+                    abs(d.seconds()),
+                    abs(d.millis()));
         return out;
     }
 
 private:
-    int _minutes;
+    Breakdown breakdown() const {
+        Millis ms;
+
+        if (_ms < Millis::zero()) {
+            ms = date::abs(_ms);
+        } else {
+            ms = _ms;
+        }
+
+        auto days = date::floor<date::days>(ms);
+        auto hours = date::floor<std::chrono::hours>(ms - days);
+        auto minutes = date::floor<std::chrono::minutes>(ms - days - hours);
+        auto seconds = date::floor<std::chrono::seconds>(ms - days - hours - minutes);
+        auto millis = date::floor<Millis>(ms - days - hours - minutes - seconds);
+        return {
+            .days = factor() * days.count(),
+            .hours = factor() * (int)hours.count(),
+            .minutes = factor() * (int)minutes.count(),
+            .seconds = factor() * (int)seconds.count(),
+            .millis = factor() * (int)millis.count()
+        };
+    }
+
+    Millis _ms;
+    Breakdown _bk;
 };
+
+// --------------------------------------------------------
+inline Duration days(int days) {
+    return Duration::of_days(days);
+}
+
+inline Duration hours(int hours) {
+    return Duration::of_hours(hours);
+}
+
+inline Duration minutes(int minutes) {
+    return Duration::of_minutes(minutes);
+}
+
+inline Duration seconds(int seconds) {
+    return Duration::of_seconds(seconds);
+}
 
 // --------------------------------------------------------
 class Date {
@@ -268,6 +359,12 @@ public:
     Date(int year, Month month, int day) : _year(year), _month(month), _day(day) {
         validate();
     }
+
+    Date(int year, int month, int day)
+    : Date(year, static_cast<Month>(month), day) { }
+
+    Date(const struct tm& tm_dt)
+    : Date(tm_dt.tm_year + 1900, tm_dt.tm_mon, tm_dt.tm_mday) { }
 
     /**
      * Advance forward the given number of calendar days.
@@ -475,6 +572,17 @@ public:
         return out;
     }
 
+    void load_struct_tm(struct tm& tm) const {
+        tm.tm_sec = 0;
+        tm.tm_min = 0;
+        tm.tm_hour = 0;
+        tm.tm_mday = day();
+        tm.tm_mon = nmonth() - 1;
+        tm.tm_year = year() - 1900;
+        tm.tm_wday = nweekday();
+        tm.tm_isdst = -1;
+    }
+
 private:
     void validate() {
         if (day() < 1) {
@@ -496,6 +604,13 @@ class Time {
 public:
     Time() : Time(0, 0) { }
 
+    Time(int hour, int minute) : _minutes(hour * 60 + minute) {
+        validate();
+    }
+
+    Time(const struct tm& tm_dt)
+    : Time(tm_dt.tm_hour, tm_dt.tm_min) { }
+
     static const Time& end_of_day() {
         static Time value(23, 59);
         return value;
@@ -504,10 +619,6 @@ public:
     static const Time& start_of_day() {
         static Time value(0, 0);
         return value;
-    }
-
-    Time(int hour, int minute) : _minutes(hour * 60 + minute) {
-        validate();
     }
 
     int hour() const {
@@ -550,9 +661,18 @@ public:
         return ! (*this == rhs);
     }
 
+    Millis to_chrono_duration() const {
+        return date::floor<Millis>(std::chrono::minutes{_minutes});
+    }
+
     friend std::ostream& operator<<(std::ostream& out, const Time& time) {
         tfm::format(out, "Time<%02d:%02d>", time.hour(), time.minute());
         return out;
+    }
+
+    void load_struct_tm(struct tm& tm) const {
+        tm.tm_min = minute();
+        tm.tm_hour = hour();
     }
 
 private:
@@ -568,213 +688,109 @@ private:
 // --------------------------------------------------------
 class Datetime {
 public:
-    Datetime() : _date(), _time(), _zone(UTC) { }
-    Datetime(const Zone& zone) : _date(), _time(), _zone(zone) { }
-    Datetime(const Date& date) : _date(date), _time(), _zone(UTC) { }
-    Datetime(const Date& date, const Zone& zone) : _date(date), _time(), _zone(zone) { }
-    Datetime(const Date& date, const Time& time) : _date(date), _time(time), _zone(UTC) { }
-    Datetime(const Date& date, const Time& time, const Zone& zone) : _date(date), _time(time), _zone(zone) { }
-    Datetime(int year, Month month) : _date(year, month), _time(), _zone(UTC) { }
-    Datetime(int year, Month month, const Zone& zone) : _date(year, month), _time(), _zone(zone) { }
-    Datetime(int year, Month month, int day) : _date(year, month, day), _time(), _zone(UTC) { }
-    Datetime(int year, Month month, int day, const Zone& zone) : _date(year, month, day), _time(), _zone(zone) { }
-    Datetime(int year, Month month, int day, int hour, int minute) : _date(year, month, day), _time(hour, minute), _zone(UTC) { }
-    Datetime(int year, Month month, int day, int hour, int minute, const Zone& zone) : _date(year, month, day), _time(hour, minute), _zone(zone) { }
+    Datetime() : _ms(0) { }
+    Datetime(const Duration& d) : _ms(d.to_chrono_duration()) { }
+    Datetime(const Millis& ms) : _ms(ms) { }
+    Datetime(const Zone& tz, const Millis& ms) : _ms(ms), _tz(tz) { }
 
-    Datetime(const struct tm& local_time, const Zone& zone) : _zone(zone) {
-        load_struct_tm(local_time);
+    Datetime(const Date& date, const Time& time = Time::start_of_day())
+    : Datetime(Zone::utc(), date, time) { }
+
+    Datetime(const Zone& tz, const Date& date, const Time& time = Time::start_of_day()) {
+        struct tm tm_localtime;
+        date.load_struct_tm(tm_localtime);
+        time.load_struct_tm(tm_localtime);
+        _tz = tz;
+        _ms = date::floor<Millis>(std::chrono::seconds{tz.mk_timestamp(tm_localtime)});
     }
 
-    Datetime(const struct tm& local_time) : Datetime(local_time, UTC) {}
+    Datetime(const Zone& tz, int year, Month month, int day = 1, int hour = 0, int minute = 0)
+    : Datetime(tz, Date(year, month, day), Time(hour, minute)) { }
 
-    Datetime(time_t timestamp) : _zone(UTC) {
-        struct tm local_time = zone().mk_struct_tm(timestamp);
-        load_struct_tm(local_time);
+    Datetime(int year, Month month, int day = 1, int hour = 0, int minute = 0)
+    : Datetime(Zone::utc(), year, month, day, hour, minute) { }
+
+    static Datetime now(const Zone& tz = Zone::utc()) {
+        return Datetime(tz, date::floor<Millis>(
+                std::chrono::system_clock::now().time_since_epoch()));
     }
 
-    static Datetime now() {
-        return Datetime(::time(nullptr));
+    Date date() const {
+        return Date(_tz.mk_struct_tm(_ms));
     }
 
-    static Datetime now(const Zone& zone) {
-        return now().at_zone(zone);
+    Time time() const {
+        return Time(_tz.mk_struct_tm(_ms));
     }
 
-    struct tm to_struct_tm() const {
-        return (struct tm) {
-            .tm_sec = 0,
-            .tm_min = time().minute(),
-            .tm_hour = time().hour(),
-            .tm_mday = date().day(),
-            .tm_mon = date().nmonth() - 1,
-            .tm_year = date().year() - 1900,
-            .tm_wday = date().nweekday(),
-            .tm_isdst = -1,
-        };
-    }
-
-    time_t to_timestamp() const {
-        return zone().mk_timestamp(to_struct_tm());
-    }
-
-    const Date& date() const {
-        return _date;
-    }
-
-    int year() const {
-        return date().year();
-    }
-
-    Month month() const {
-        return date().month();
-    }
-
-    int day() const {
-        return date().day();
-    }
-
-    const Time& time() const {
-        return _time;
-    }
-
-    int hour() const {
-        return time().hour();
-    }
-
-    int minute() const {
-        return time().minute();
+    Datetime zone(const Zone& tz) const {
+        return Datetime(tz, _ms);
     }
 
     const Zone& zone() const {
-        return _zone;
+        return _tz;
     }
 
-    Datetime with_date(const Date& date) const {
-        return Datetime(date, time(), zone());
+    Datetime utc() const {
+        return zone(Zone::utc());
     }
 
-    Datetime with_year(int year) const {
-        return with_date(
-            date().with_year(year)
-        );
+    Datetime local() const {
+        return zone(Zone::local());
     }
 
-    Datetime with_month(Month month) const {
-        return with_date(
-            date().with_month(month)
-        );
+    Datetime operator+(const Duration& d) const {
+        return Datetime(_tz, _ms + d.to_chrono_duration());
     }
 
-    Datetime with_day(int day) const {
-        return with_date(
-            date().with_day(day)
-        );
+    Duration operator-(const Datetime& rhs) const {
+        return Duration(_ms - rhs._ms);
     }
 
-    Datetime with_time(const Time& time) const {
-        return Datetime(date(), time, zone());
-    }
-
-    Datetime with_hour(int hour) const {
-        return with_time(
-            time().with_hour(hour)
-        );
-    }
-
-    Datetime with_minute(int minute) const {
-        return with_time(
-            time().with_minute(minute)
-        );
-    }
-
-    Datetime with_zone(const Zone& zone) const {
-        return Datetime(date(), time(), zone);
-    }
-
-    Datetime at_zone(const Zone& zone) const {
-        struct tm zoned_time = zone.mk_struct_tm(to_timestamp());
-        return Datetime(zoned_time, zone);
+    Datetime operator-(const Duration& d) const {
+        return Datetime(_tz, _ms - d.to_chrono_duration());
     }
 
     bool is_dst() const {
-        struct tm zoned_time = zone().mk_struct_tm(to_timestamp());
-        return zoned_time.tm_isdst > 0;
-    }
-
-    bool operator<(const Datetime& rhs) const {
-        return to_timestamp() < rhs.to_timestamp();
-    }
-
-    bool operator>(const Datetime& rhs) const {
-        return to_timestamp() > rhs.to_timestamp();
+        return _tz.mk_struct_tm(_ms).tm_isdst;
     }
 
     bool operator==(const Datetime& rhs) const {
-        return to_timestamp() == rhs.to_timestamp();
+        return _ms == rhs._ms;
     }
 
     bool operator!=(const Datetime& rhs) const {
         return !(*this == rhs);
     }
 
-    bool operator>=(const Datetime& rhs) const {
-        return *this > rhs || *this == rhs;
+    bool operator<(const Datetime& rhs) const {
+        return _ms < rhs._ms;
+    }
+
+    bool operator>(const Datetime& rhs) const {
+        return _ms > rhs._ms;
     }
 
     bool operator<=(const Datetime& rhs) const {
-        return *this < rhs || *this == rhs;
+        return (*this == rhs) || (*this < rhs);
     }
 
-    Datetime operator+(const Duration& rhs) const {
-        return Datetime(to_timestamp() + rhs.total_minutes() * 60).at_zone(zone());
+    bool operator>=(const Datetime& rhs) const {
+        return (*this == rhs) || (*this > rhs);
     }
 
-    Datetime operator-(const Duration& rhs) const {
-        return Datetime(to_timestamp() - rhs.total_minutes() * 60).at_zone(zone());
-    }
-
-    Datetime& operator+=(const Duration& rhs) {
-        Datetime lhs = *this + rhs;
-        *this = lhs;
-        return *this;
-    }
-
-    Datetime& operator-=(const Duration& rhs) {
-        Datetime lhs = *this + rhs;
-        *this = lhs;
-        return *this;
-    }
-
-    Duration operator-(const Datetime& rhs) const {
-        return Duration(labs(to_timestamp() / 60 - rhs.to_timestamp() / 60));
-    }
-
-    std::string format(const std::string& format = DEFAULT_FORMAT) const {
-        return zone().strftime(format, to_struct_tm());
+    std::string format(const std::string& fmt = DEFAULT_FORMAT) const {
+        return _tz.strftime(fmt, _tz.mk_struct_tm(_ms));
     }
 
     friend std::ostream& operator<<(std::ostream& out, const Datetime& dt) {
-        tfm::format(out, "Datetime<%04d-%02d-%02d %02d:%02d %s>",
-                    dt.date().year(),
-                    dt.date().nmonth(),
-                    dt.date().day(),
-                    dt.time().hour(),
-                    dt.time().minute(),
-                    dt.zone().name(dt.is_dst()));
+        out << dt.format();
         return out;
     }
 
 private:
-    void load_struct_tm(struct tm local_time) {
-        _date = Date().with_year(local_time.tm_year + 1900)
-            .with_nmonth(local_time.tm_mon + 1)
-            .with_day(local_time.tm_mday);
-        _time = Time(local_time.tm_hour, local_time.tm_min);
-    }
-
-    Date _date;
-    Time _time;
-    Zone _zone;
+    Millis _ms;
+    Zone _tz = Zone::utc();
 };
 
 // --------------------------------------------------------
@@ -825,10 +841,10 @@ public:
                      std::min(end(), clipping_range.end()));
     }
 
-    Range with_zone(const Zone& zone) const {
+    Range zone(const Zone& zone) const {
         return Range(
-            start().with_zone(zone),
-            end().with_zone(zone));
+            start().zone(zone),
+            end().zone(zone));
     }
 
     bool operator==(const Range& rhs) const {

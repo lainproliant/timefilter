@@ -19,7 +19,7 @@ public:
     YearFilter(int year) : Filter(FilterType::Year), _year(year) { }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
-        if (pivot >= Datetime(_year, Month::January, 1, pivot.zone())) {
+        if (pivot >= Datetime(pivot.zone(), _year, Month::January, 1)) {
             return {};
         }
 
@@ -47,7 +47,7 @@ private:
     Range range(const Zone& zone) const {
         return Range(
             Datetime(_year, Month::January, 1),
-            Datetime(_year + 1, Month::January, 1)).with_zone(zone);
+            Datetime(_year + 1, Month::January, 1)).zone(zone);
     }
 
     int _year;

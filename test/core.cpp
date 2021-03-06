@@ -16,19 +16,19 @@ int main() {
         assert_equal(last_day_of_month(2049, Month::December), 31);
     })
     .test("class Duration", [&]() {
-        Duration dA(8670);
+        Duration dA = minutes(8670);
         std::cout << "dA = " << dA << std::endl;
         assert_equal(dA.days(), 6, "dA days");
         assert_equal(dA.hours(), 0, "dA hours");
         assert_equal(dA.minutes(), 30, "dA minutes");
 
-        Duration dB(50, 30);
+        Duration dB = hours(50) + minutes(30);
         std::cout << "dB = "<< dB << std::endl;
         assert_equal(dB.days(), 2, "dB days");
         assert_equal(dB.hours(), 2, "dB hours");
         assert_equal(dB.minutes(), 30, "dB minutes");
 
-        Duration dC(21, 22, 23);
+        Duration dC = days(21) + hours(22) + minutes(23);
         std::cout << "dC = " << dC << std::endl;
         assert_equal(dC.days(), 21, "dC days");
         assert_equal(dC.hours(), 22, "dC hours");
@@ -48,9 +48,10 @@ int main() {
 
         Duration dF = dA - dC;
         std::cout << "dF = dA - dC = " << dF << std::endl;
-        assert_equal(dF.days(), -15, "dF days");
-        assert_equal(dF.hours(), -21, "dF hours");
-        assert_equal(dF.minutes(), -53, "dF minutes");
+        assert_equal(dF.factor(), -1, "dF factor");
+        assert_equal(dF.days(), 15, "dF days");
+        assert_equal(dF.hours(), 21, "dF hours");
+        assert_equal(dF.minutes(), 53, "dF minutes");
     })
     .test("class Date", [&]() {
         Date dateA;
@@ -120,39 +121,39 @@ int main() {
         assert_equal(dtA.date(), Date(1970, Month::January, 1), "dtA date()");
         assert_equal(dtA.time(), Time(0, 0), "dtA time()");
 
-        Datetime dtB(1608163834);
+        Datetime dtB(seconds(1608163834));
         std::cout << "dtB = " << dtB << std::endl;
         assert_equal(dtB.date(), Date(2020, Month::December, 17), "dtB date()");
         assert_equal(dtB.time(), Time(0, 10), "dtB time()");
 
-        Duration durationA(2, 30);
+        Duration durationA = hours(-2) - minutes(30);
         std::cout << "durationA = " << durationA << std::endl;
-        Datetime dtC = dtB - durationA;
-        std::cout << "dtC = dtB - durationA = " << dtC << std::endl;
+        Datetime dtC = dtB + durationA;
+        std::cout << "dtC = dtB + durationA = " << dtC << std::endl;
         assert_equal(dtC.date(), Date(2020, Month::December, 16), "dtC date()");
         assert_equal(dtC.time(), Time(21, 40), "dtC time()");
         Duration durationB = dtC - dtB;
         std::cout << "durationB = dtC - dtB = " << durationB << std::endl;
         assert_equal(durationB, durationA, "durationB == durationA");
 
-        Duration durationC(30, 23, 15);
+        Duration durationC = days(30) + hours(23) + minutes(15);
         std::cout << "durationC = " << durationC << std::endl;
         Datetime dtD = dtB + durationC;
         std::cout << "dtD = dtB + durationC = " << dtD << std::endl;
         assert_equal(dtD.date(), Date(2021, Month::January, 16), "dtD date()");
         assert_equal(dtD.time(), Time(23, 25), "dtD time()");
 
-        Datetime dtE = dtD.at_zone(LOCAL);
-        std::cout << "dtE = dtD.at_zone(LOCAL) = " << dtE << std::endl;
-        Datetime dtF = dtE.at_zone(UTC);
-        std::cout << "dtF = dtE.at_zone(UTC) = " << dtF << std::endl;
+        Datetime dtE = dtD.local();
+        std::cout << "dtE = dtD.local() = " << dtE << std::endl;
+        Datetime dtF = dtE.utc();
+        std::cout << "dtF = dtE.utc() = " << dtF << std::endl;
         assert_false(dtE != dtF, "dtE != dtF");
         assert_equal(dtD, dtF, "dtD == dtF");
 
-        Datetime nowUTC = Datetime::now();
+        Datetime nowUTC = Datetime::now().utc();
         std::cout << "nowUTC = " << nowUTC << std::endl;
 
-        Datetime nowLocal = nowUTC.at_zone(LOCAL);
+        Datetime nowLocal = nowUTC.local();
         std::cout << "nowLocal = " << nowLocal << std::endl;
         std::cout << "nowLocal.is_dst() = " << nowLocal.is_dst() << std::endl;
         Duration sixMonths = Duration::of_days(180);

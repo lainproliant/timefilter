@@ -15,8 +15,8 @@ using namespace moonlight;
 
 int main() {
     auto lex = lex::Lexer().throw_on_scan_failure(false);
-
-    auto grammar = timefilter::make_grammar();
+    timefilter::I18nStrings i18n;
+    auto grammar = timefilter::make_grammar(i18n);
     std::string line;
 
     for(;;) {

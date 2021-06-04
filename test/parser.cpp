@@ -124,10 +124,10 @@ int main() {
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
         auto prev_range = filter->prev_range(pivot);
-        assert_equal(next_range->start(), Datetime(2020, Month::November, 13));
-        assert_equal(next_range->end(), Datetime(2020, Month::November, 14));
-        assert_equal(prev_range->start(), Datetime(2021, Month::August, 13));
-        assert_equal(prev_range->end(), Datetime(2021, Month::August, 14));
+        assert_equal(next_range->start(), Datetime(2021, Month::August, 13));
+        assert_equal(next_range->end(), Datetime(2021, Month::August, 14));
+        assert_equal(prev_range->start(), Datetime(2020, Month::November, 13));
+        assert_equal(prev_range->end(), Datetime(2020, Month::November, 14));
     })
     .test("weekday_monthday_short", [&]() {
         auto filter = compile("Fri 13");
@@ -135,10 +135,10 @@ int main() {
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
         auto prev_range = filter->prev_range(pivot);
-        assert_equal(next_range->start(), Datetime(2020, Month::November, 13));
-        assert_equal(next_range->end(), Datetime(2020, Month::November, 14));
-        assert_equal(prev_range->start(), Datetime(2021, Month::August, 13));
-        assert_equal(prev_range->end(), Datetime(2021, Month::August, 14));
+        assert_equal(next_range->start(), Datetime(2021, Month::August, 13));
+        assert_equal(next_range->end(), Datetime(2021, Month::August, 14));
+        assert_equal(prev_range->start(), Datetime(2020, Month::November, 13));
+        assert_equal(prev_range->end(), Datetime(2020, Month::November, 14));
     })
     .test("month_long", [&]() {
         auto filter = compile("October");

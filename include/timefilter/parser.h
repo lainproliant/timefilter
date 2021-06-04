@@ -149,7 +149,7 @@ inline lex::Grammar::Pointer make_grammar(const I18nStrings& i18n) {
         ->def(lex::match(i18n.long_weekday_rx() + term).icase(), "weekday_long")
         ->def(lex::match(i18n.short_weekday_rx() + term).icase(), "weekday_short")
         ->def(lex::match("([0-9]{4,})-([0-9]{2})-([0-9]{2})"), "iso_date")
-        ->def(lex::match("([0-9]{2})/([0-9]{2})/([0-9]{4,})"), "us_date")
+        ->def(lex::match("([0-9]{1,2})/([0-9]{1,2})/([0-9]{4,})"), "us_date")
         ->def(lex::match("([0-9]{1,2})([0-9]{2})h"), "mil_time")
         ->def(lex::match("([0-9]{1,2}):([0-9]{2})\\s?(am|pm|a|p)").icase(), "h12_time")
         ->def(lex::match("([0-9]{1,2}):([0-9]{2})"), "h24_time")
@@ -259,8 +259,8 @@ inline std::map<std::string, FilterFactory> make_factories() {
     const auto us_date_factory = [](const I18nStrings& i18n, const lex::Token& token) {
         (void) i18n;
         auto list = ListFilter::create();
-        int day = std::stoi(token.match().group(1));
-        Month month = static_cast<Month>(std::stoi(token.match().group(2)) - 1);
+        Month month = static_cast<Month>(std::stoi(token.match().group(1)) - 1);
+        int day = std::stoi(token.match().group(2));
         int year = std::stoi(token.match().group(3));
         list->push(MonthdayFilter::create(day));
         list->push(MonthFilter::create(month));

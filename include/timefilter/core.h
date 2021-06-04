@@ -29,7 +29,12 @@
 namespace timefilter {
 
 using namespace moonlight::date;
-namespace gen = moonlight::gen;
+
+// --------------------------------------------------------
+class Error : public moonlight::core::Exception {
+    using Exception::Exception;
+};
+
 // --------------------------------------------------------
 enum class FilterType {
     Month,
@@ -54,7 +59,7 @@ public:
     const std::string& type_name() const {
         static std::map<FilterType, std::string> NAME_TABLE = {
             {FilterType::Month, "Month"},
-            {FilterType::Monthday, "Month"},
+            {FilterType::Monthday, "Monthday"},
             {FilterType::Range, "Range"},
             {FilterType::Select, "Select"},
             {FilterType::List, "List"},
@@ -74,16 +79,22 @@ public:
     virtual std::optional<Range> next_range(const Datetime& pivot) const = 0;
     virtual std::optional<Range> prev_range(const Datetime& pivot) const = 0;
 
-    virtual int order() const {
-        return 0;
+    std::optional<Range> absolute_range() const {
+        auto start = Datetime::min();
+        auto range = next_range(start);
+        if (! range.has_value()) {
+            return {};
+        }
+
+        if (next_range(range->end()).has_value()) {
+            return {};
+        } else {
+            return range;
+        }
     }
 
-    virtual void validate_stack(const gen::Iterator<Pointer>& iter) const {
-        for (auto it = iter; it != gen::end<Pointer>(); it++) {
-            if ((*it)->order() >= order()) {
-                throw ValueError(tfm::format("%s is of equal or higher order than %s and can't be included in the same filter stack.", (*it)->type_name(), type_name()));
-            }
-        }
+    virtual int order() const {
+        return 0;
     }
 
     virtual bool should_clip() const {
@@ -97,6 +108,10 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const Filter& filter) {
         out << filter.repr();
         return out;
+    }
+
+    bool is_absolute() const {
+        return absolute_range().has_value();
     }
 
 protected:

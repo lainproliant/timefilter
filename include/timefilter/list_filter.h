@@ -10,33 +10,45 @@
 #ifndef __TIMEFILTER_LIST_FILTER_H
 #define __TIMEFILTER_LIST_FILTER_H
 
+#include "moonlight/collect.h"
 #include "timefilter/core.h"
 
 namespace timefilter {
 
 // ------------------------------------------------------------------
+class ListFilterValidationError : public Error {
+    using Error::Error;
+};
+
+// ------------------------------------------------------------------
 typedef std::vector<Filter::Pointer>::const_iterator ListIterator;
 
-class ListViewFilter : public Filter {
+class StackViewFilter : public Filter {
 public:
-    ListViewFilter(ListIterator iter, ListIterator end) : Filter(FilterType::List), _iter(iter), _end(end) { }
+    StackViewFilter(ListIterator iter, ListIterator end) : Filter(FilterType::List), _iter(iter), _end(end) { }
 
     std::optional<Range> next_range(const Datetime& pivot) const override {
         if (empty()) return {};
 
         auto next = cdr();
-        auto date = pivot;
+        auto dt = pivot;
 
         for (;;) {
-            auto back_range = car()->prev_range(date);
-            if (back_range.has_value() && back_range->contains(date) && ! next.empty()) {
-                auto step_range = next.next_range(date);
-                if (step_range.has_value() && back_range->contains(step_range->start())) {
-                    return step_range;
+            auto back_range = car()->prev_range(dt);
+
+            if (back_range.has_value() && back_range->contains(dt)) {
+                if (next.empty() && back_range == Range::for_days(dt.date(), 1)) {
+                    return back_range;
+
+                } else {
+                    auto step_range = next.next_range(dt);
+                    if (step_range.has_value() && back_range->contains(step_range->start())) {
+                        return step_range;
+                    }
                 }
             }
 
-            auto range = car()->next_range(date);
+            auto range = car()->next_range(dt);
             if (range.has_value()) {
                 if (! next.empty()) {
                     auto step_range = next.next_range(range->start());
@@ -48,7 +60,7 @@ public:
                     return range;
                 }
 
-                date = range->end();
+                dt = range->end();
 
             } else {
                 return {};
@@ -99,8 +111,8 @@ public:
         return *_iter;
     }
 
-    ListViewFilter cdr() const {
-        return ListViewFilter(std::next(_iter), _end);
+    StackViewFilter cdr() const {
+        return StackViewFilter(std::next(_iter), _end);
     }
 
 protected:
@@ -122,6 +134,13 @@ class ListFilter : public Filter {
 public:
     ListFilter() : Filter(FilterType::List) { }
 
+    static std::shared_ptr<ListFilter> create() {
+        return std::make_shared<ListFilter>();
+    }
+
+    ListFilter(const std::vector<Filter::Pointer> stack)
+    : Filter(FilterType::List), _stack(sort_and_validate(stack)) { }
+
     std::optional<Range> next_range(const Datetime& pivot) const override {
         return view().next_range(pivot);
     }
@@ -131,8 +150,15 @@ public:
     }
 
     ListFilter& push(Filter::Pointer filter) {
-        filter->validate_stack(gen::wrap(_stack.begin(), _stack.end()));
-        _stack.push_back(filter);
+        std::vector<Filter::Pointer> filters(_stack);
+        if (filter->type() == FilterType::List) {
+            auto list = static_pointer_cast<ListFilter>(filter);
+            std::copy(list->_stack.begin(), list->_stack.end(), std::back_inserter(filters));
+
+        } else {
+            filters.push_back(filter);
+        }
+        _stack = sort_and_validate(filters);
         return *this;
     }
 
@@ -146,8 +172,26 @@ protected:
     }
 
 private:
-    ListViewFilter view() const {
-        return ListViewFilter(_stack.begin(), _stack.end());
+    static std::vector<Filter::Pointer> sort_and_validate(const std::vector<Filter::Pointer>& stack) {
+        std::set<int> orders;
+        auto sorted = moonlight::collect::sorted(
+            stack,
+            [](const auto& filterA, const auto& filterB) {
+                return filterA->order() < filterB->order();
+            }
+        );
+        for (auto filter : sorted) {
+            if (orders.find(filter->order()) == orders.end()) {
+                orders.insert(filter->order());
+            } else {
+                throw ListFilterValidationError("Multiple filters with the same order provided.");
+            }
+        }
+        return sorted;
+    }
+
+    StackViewFilter view() const {
+        return StackViewFilter(_stack.begin(), _stack.end());
     }
 
     std::vector<Filter::Pointer> _stack;

@@ -47,7 +47,7 @@ public:
     }
 
     int order() const override {
-        return 4;
+        return 5;
     }
 
 protected:

@@ -46,7 +46,7 @@ enum class FilterType {
 // --------------------------------------------------------
 class Filter : public std::enable_shared_from_this<Filter> {
 public:
-    typedef std::shared_ptr<Filter> Pointer;
+    typedef std::shared_ptr<const Filter> Pointer;
 
     Filter(FilterType type) : _type(type) { }
     virtual ~Filter() {  }

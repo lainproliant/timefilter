@@ -46,10 +46,6 @@ public:
         return Range::for_days(month_weekday.value(), 1);
     }
 
-    int order() const override {
-        return 4;
-    }
-
 protected:
     std::string _repr() const override {
         return tfm::format("%d:%d", _offset, static_cast<int>(_weekday));

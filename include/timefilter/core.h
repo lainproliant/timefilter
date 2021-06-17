@@ -40,12 +40,21 @@ enum class FilterType {
     Month,
     Monthday,
     Range,
-    Select,
     List,
     Time,
     Weekday,
     WeekdayOfMonth,
     Year,
+};
+
+// --------------------------------------------------------
+enum class FilterOrder {
+    Absolute,
+    Year,
+    Month,
+    Monthday,
+    Weekday,
+    TimeOfDay
 };
 
 // --------------------------------------------------------
@@ -61,7 +70,6 @@ public:
             {FilterType::Month, "Month"},
             {FilterType::Monthday, "Monthday"},
             {FilterType::Range, "Range"},
-            {FilterType::Select, "Select"},
             {FilterType::List, "List"},
             {FilterType::Time, "Time"},
             {FilterType::Weekday, "Weekday"},
@@ -94,7 +102,18 @@ public:
     }
 
     virtual int order() const {
-        return 0;
+        static const std::map<FilterType, FilterOrder> orders = {
+             {FilterType::Month, FilterOrder::Month},
+             {FilterType::Monthday, FilterOrder::Monthday},
+             {FilterType::Range, FilterOrder::Absolute},
+             {FilterType::List, FilterOrder::Absolute},
+             {FilterType::Time, FilterOrder::TimeOfDay},
+             {FilterType::Weekday, FilterOrder::Weekday},
+             {FilterType::WeekdayOfMonth, FilterOrder::Weekday},
+             {FilterType::Year, FilterOrder::Year}
+        };
+        assert(orders.find(type()) != orders.end());
+        return static_cast<int>(orders.find(type())->second);
     }
 
     virtual bool should_clip() const {

@@ -58,10 +58,6 @@ public:
         return range(date, pivot.zone());
     }
 
-    int order() const override {
-        return 2;
-    }
-
 protected:
     std::string _repr() const override {
         std::vector<int> nmonths;

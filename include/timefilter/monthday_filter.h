@@ -50,10 +50,6 @@ public:
         return Range::for_days(monthday, 1);
     }
 
-    int order() const override {
-        return 3;
-    }
-
 protected:
     std::string _repr() const override {
         std::vector<int> monthdays(_days.begin(), _days.end());

@@ -38,10 +38,6 @@ public:
         return range(pivot.zone());
     }
 
-    int order() const override {
-        return 1;
-    }
-
 protected:
     std::string _repr() const override {
         return tfm::format("%d", _year);

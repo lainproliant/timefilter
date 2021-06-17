@@ -54,10 +54,6 @@ public:
         return Range::for_days(date, 1);
     }
 
-    int order() const override {
-        return 4;
-    }
-
 protected:
     std::string _repr() const override {
         std::vector<int> nweekdays;

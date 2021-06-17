@@ -44,6 +44,11 @@ public:
 
     I18nStrings() : I18nStrings(json::Object()) { }
 
+    static const I18nStrings& defaults() {
+        static const I18nStrings i18n;
+        return i18n;
+    }
+
     std::string short_weekday_rx() const {
         return _short_weekday_rx;
     }
@@ -351,6 +356,22 @@ inline std::map<std::string, FilterFactory> make_factories() {
 }
 
 // ------------------------------------------------------------------
+class Parser {
+public:
+    Parser(const I18nStrings& i18n = I18nStrings::defaults())
+    : _i18n(i18n), _lex(lex::Lexer()), _grammar(make_grammar(i18n)) { }
+
+    std::vector<lex::Token> parse(const std::string& expr) const {
+        return _lex.lex(_grammar, expr);
+    }
+
+private:
+    const I18nStrings _i18n;
+    const lex::Lexer _lex;
+    const lex::Grammar::Pointer _grammar;
+};
+
+// ------------------------------------------------------------------
 class Compiler {
 public:
     Compiler(
@@ -374,6 +395,13 @@ private:
     const timefilter::I18nStrings _i18n;
     const std::map<std::string, FilterFactory> _factories;
 };
+
+// ------------------------------------------------------------------
+inline Filter::Pointer eval(const std::string& expr, const I18nStrings& i18n = I18nStrings::defaults()) {
+    Parser parser(i18n);
+    Compiler compiler(i18n, make_factories());
+    return compiler.compile(parser.parse(expr));
+}
 
 }
 

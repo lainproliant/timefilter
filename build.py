@@ -10,7 +10,7 @@
 
 from pathlib import Path
 
-from xeno.build import Recipe, build, default, provide, sh, target, recipe
+from xeno.build import Recipe, build, default, provide, sh, target, factory
 
 INCLUDES = [
     "-I./include",
@@ -38,7 +38,7 @@ def submodules():
     return sh("git submodule update --init --recursive")
 
 # -------------------------------------------------------------------
-@recipe
+@factory
 def compile_test(src, headers):
     return sh(
         "{CC} {CFLAGS} {src} {LDFLAGS} -o {output}",
@@ -55,6 +55,11 @@ def test_sources():
 
 # -------------------------------------------------------------------
 @provide
+def lab_sources():
+    return Path.cwd().glob("lab/*.cpp")
+
+# -------------------------------------------------------------------
+@provide
 def headers():
     return Path.cwd().glob("include/timefilter/*.h")
 
@@ -62,6 +67,12 @@ def headers():
 @target
 async def tests(test_sources, headers, submodules):
     return Recipe([compile_test(src, headers) for src in test_sources], setup=submodules)
+
+# -------------------------------------------------------------------
+@target
+async def labs(lab_sources, headers, submodules):
+    await submodules.resolve()
+    return [compile_test(src, headers) for src in lab_sources]
 
 # -------------------------------------------------------------------
 @default

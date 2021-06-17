@@ -46,10 +46,6 @@ public:
         return range(get_prev_daytime(pivot), pivot.zone());
     }
 
-    int order() const override {
-        return 4;
-    }
-
 protected:
     std::string _repr() const override {
         std::vector<Time> times(_times.begin(), _times.end());

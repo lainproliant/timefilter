@@ -18,6 +18,10 @@ class YearFilter : public Filter {
 public:
     YearFilter(int year) : Filter(FilterType::Year), _year(year) { }
 
+    static std::shared_ptr<YearFilter> create(int year) {
+        return std::make_shared<YearFilter>(year);
+    }
+
     std::optional<Range> next_range(const Datetime& pivot) const override {
         if (pivot >= Datetime(pivot.zone(), _year, Month::January, 1)) {
             return {};
@@ -32,10 +36,6 @@ public:
         }
 
         return range(pivot.zone());
-    }
-
-    int order() const override {
-        return 1;
     }
 
 protected:

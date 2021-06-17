@@ -142,6 +142,9 @@ private:
     FilterType _type;
 };
 
+// --------------------------------------------------------
+typedef Filter::Pointer filter_t;
+
 }
 
 #endif /* !__TIMEFILTER_CORE_H */

@@ -75,9 +75,14 @@ async def labs(lab_sources, headers, submodules):
     return [compile_test(src, headers) for src in lab_sources]
 
 # -------------------------------------------------------------------
-@default
+@target
 def run_tests(tests):
     return tuple(sh("{input}", input=test, cwd="test") for test in tests)
+
+# -------------------------------------------------------------------
+@default
+def all(run_tests, labs):
+    return [run_tests, labs]
 
 # -------------------------------------------------------------------
 if __name__ == "__main__":

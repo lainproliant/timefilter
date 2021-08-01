@@ -133,6 +133,11 @@ public:
         return absolute_range().has_value();
     }
 
+    bool is_never() const {
+        Datetime dt;
+        return (!prev_range(dt).has_value() && !next_range(dt).has_value());
+    }
+
 protected:
     virtual std::string _repr() const {
         return "";

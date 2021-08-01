@@ -37,6 +37,9 @@ int main() {
             auto abs_range = filter->absolute_range().value();
             std::cout << "abs range " << abs_range << std::endl;
 
+        } else if (filter->is_never()) {
+            std::cout << "NEVER" << std::endl;
+
         } else {
             auto now = Datetime::now();
             auto prev_range = filter->prev_range(now);

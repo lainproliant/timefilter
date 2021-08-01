@@ -37,7 +37,7 @@ public:
             auto back_range = car()->prev_range(dt);
 
             if (back_range.has_value() && back_range->contains(dt)) {
-                if (next.empty() && back_range == Range::for_days(dt.date(), 1)) {
+                if (next.empty() && back_range == Range::for_days(dt.date(), 1) && back_range->start() >= pivot) {
                     return back_range;
 
                 } else {

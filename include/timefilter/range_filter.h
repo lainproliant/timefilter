@@ -34,7 +34,7 @@ public:
     }
 
     std::optional<Range> prev_range(const Datetime& pivot) const override {
-        if (pivot >= _range.start() && pivot < _range.end()) {
+        if (pivot >= _range.start()) {
             return _range;
         }
         return {};

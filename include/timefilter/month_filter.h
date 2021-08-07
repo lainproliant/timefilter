@@ -16,6 +16,7 @@
 
 namespace timefilter {
 
+// ------------------------------------------------------------------
 class MonthFilter : public Filter {
 public:
     MonthFilter(const std::set<Month>& months) : Filter(FilterType::Month), _months(months) { }

@@ -45,6 +45,7 @@ enum class FilterType {
     Weekday,
     WeekdayOfMonth,
     Year,
+    Duration,
 };
 
 // --------------------------------------------------------
@@ -54,7 +55,8 @@ enum class FilterOrder {
     Month,
     Monthday,
     Weekday,
-    TimeOfDay
+    TimeOfDay,
+    Last
 };
 
 // --------------------------------------------------------
@@ -75,6 +77,7 @@ public:
             {FilterType::Weekday, "Weekday"},
             {FilterType::WeekdayOfMonth, "WeekdayOfMonth"},
             {FilterType::Year, "Year"},
+            {FilterType::Duration, "Duration"},
         };
 
         return moonlight::maps::get(NAME_TABLE, type(), "???");
@@ -110,7 +113,8 @@ public:
              {FilterType::Time, FilterOrder::TimeOfDay},
              {FilterType::Weekday, FilterOrder::Weekday},
              {FilterType::WeekdayOfMonth, FilterOrder::Weekday},
-             {FilterType::Year, FilterOrder::Year}
+             {FilterType::Year, FilterOrder::Year},
+             {FilterType::Duration, FilterOrder::Last},
         };
         assert(orders.find(type()) != orders.end());
         return static_cast<int>(orders.find(type())->second);

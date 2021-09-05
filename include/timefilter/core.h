@@ -46,6 +46,7 @@ enum class FilterType {
     WeekdayOfMonth,
     Year,
     Duration,
+    Custom
 };
 
 // --------------------------------------------------------

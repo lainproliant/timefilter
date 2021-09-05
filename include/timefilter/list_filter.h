@@ -177,6 +177,9 @@ private:
         auto sorted = moonlight::collect::sorted(
             stack,
             [](const auto& filterA, const auto& filterB) {
+                if (filterA->order() < 0 || filterB->order() < 0) {
+                    throw ListFilterValidationError("Unorderable filter can't be added to a list.");
+                }
                 return filterA->order() < filterB->order();
             }
         );

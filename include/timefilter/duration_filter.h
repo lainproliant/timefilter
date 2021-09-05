@@ -14,11 +14,20 @@
 
 namespace timefilter {
 
+
+// ------------------------------------------------------------------
+class DurationFilterValidationError : public Error {
+    using Error::Error;
+};
+
+
 // ------------------------------------------------------------------
 class DurationFilter : public Filter {
 public:
     DurationFilter(filter_t base_filter, const Duration& duration)
-    : Filter(FilterType::Duration), _base_filter(base_filter), _duration(duration) { }
+    : Filter(FilterType::Duration), _base_filter(base_filter), _duration(duration) {
+        validate();
+    }
 
     static std::shared_ptr<DurationFilter> create(filter_t base_filter, const Duration& duration) {
         return std::make_shared<DurationFilter>(base_filter, duration);
@@ -43,6 +52,14 @@ public:
     }
 
 private:
+    void validate() {
+        if (_duration <= Duration::zero()) {
+            throw DurationFilterValidationError(
+                "Duration must be greater than zero."
+            );
+        }
+    }
+
     filter_t _base_filter;
     Duration _duration;
 };

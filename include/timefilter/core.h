@@ -69,6 +69,7 @@ public:
     virtual ~Filter() {  }
 
     const std::string& type_name() const {
+        static std::string UNKNOWN = "???";
         static std::map<FilterType, std::string> NAME_TABLE = {
             {FilterType::Month, "Month"},
             {FilterType::Monthday, "Monthday"},
@@ -81,7 +82,7 @@ public:
             {FilterType::Duration, "Duration"},
         };
 
-        return moonlight::maps::get(NAME_TABLE, type(), "???");
+        return NAME_TABLE.contains(type()) ? NAME_TABLE[type()] : UNKNOWN;
     }
 
     FilterType type() const {

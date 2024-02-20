@@ -1,1 +1,5 @@
 .mypy_cache
+*.plist
+.cache
+.ccls-cache
+compile_commands.json

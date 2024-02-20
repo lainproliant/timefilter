@@ -7,11 +7,11 @@
  * Distributed under terms of the MIT license.
  */
 
+#include <csignal>
+#include <iostream>
 #include "moonlight/test.h"
 #include "timefilter/offset_filter.h"
 #include "timefilter/monthday_filter.h"
-#include <csignal>
-#include <iostream>
 
 using namespace timefilter;
 using namespace moonlight;
@@ -28,18 +28,17 @@ int main() {
         auto next_occurrence = filter->next_range(pivot);
         auto next_offseter = offset_filter->next_range(pivot);
 
-        assert_true(next_occurrence.has_value());
+        ASSERT_TRUE(next_occurrence.has_value());
         std::cout << next_occurrence.value() << std::endl;
-        assert_equal(next_occurrence.value(),
+        ASSERT_EQUAL(next_occurrence.value(),
                      Range(Datetime(2077, Month::May, 13),
                            Datetime(2077, Month::May, 14)));
 
-        assert_true(next_offseter.has_value());
+        ASSERT_TRUE(next_offseter.has_value());
         std::cout << next_offseter.value() << std::endl;
-        assert_equal(next_offseter.value(),
+        ASSERT_EQUAL(next_offseter.value(),
                      Range(Datetime(2077, Month::May, 12),
                            Datetime(2077, Month::May, 13)));
     })
     .run();
-
 }

@@ -10,17 +10,19 @@
 #ifndef __TIMEFILTER_CORE_H
 #define __TIMEFILTER_CORE_H
 
+#include <map>
+#include <ctime>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <memory>
+#include <chrono>
+
 #include "tinyformat/tinyformat.h"
 #include "moonlight/generator.h"
 #include "moonlight/exceptions.h"
 #include "moonlight/maps.h"
 #include "moonlight/date.h"
-#include <map>
-#include <ctime>
-#include <cstdlib>
-#include <cstring>
-#include <memory>
-#include <chrono>
 
 #ifndef TIMEFILTER_TZ_UNSAFE
 #include <thread>
@@ -62,10 +64,10 @@ enum class FilterOrder {
 
 // --------------------------------------------------------
 class Filter : public std::enable_shared_from_this<Filter> {
-public:
+ public:
     typedef std::shared_ptr<Filter> Pointer;
 
-    Filter(FilterType type) : _type(type) { }
+    explicit Filter(FilterType type) : _type(type) { }
     virtual ~Filter() {  }
 
     const std::string& type_name() const {
@@ -108,15 +110,15 @@ public:
 
     virtual int order() const {
         static const std::map<FilterType, FilterOrder> orders = {
-             {FilterType::Month, FilterOrder::Month},
-             {FilterType::Monthday, FilterOrder::Monthday},
-             {FilterType::Range, FilterOrder::Absolute},
-             {FilterType::List, FilterOrder::Absolute},
-             {FilterType::Time, FilterOrder::TimeOfDay},
-             {FilterType::Weekday, FilterOrder::Weekday},
-             {FilterType::WeekdayOfMonth, FilterOrder::Weekday},
-             {FilterType::Year, FilterOrder::Year},
-             {FilterType::Duration, FilterOrder::Last},
+            {FilterType::Month, FilterOrder::Month},
+            {FilterType::Monthday, FilterOrder::Monthday},
+            {FilterType::Range, FilterOrder::Absolute},
+            {FilterType::List, FilterOrder::Absolute},
+            {FilterType::Time, FilterOrder::TimeOfDay},
+            {FilterType::Weekday, FilterOrder::Weekday},
+            {FilterType::WeekdayOfMonth, FilterOrder::Weekday},
+            {FilterType::Year, FilterOrder::Year},
+            {FilterType::Duration, FilterOrder::Last},
         };
         assert(orders.find(type()) != orders.end());
         return static_cast<int>(orders.find(type())->second);
@@ -144,18 +146,18 @@ public:
         return (!prev_range(dt).has_value() && !next_range(dt).has_value());
     }
 
-protected:
+ protected:
     virtual std::string _repr() const {
         return "";
     }
 
-private:
+ private:
     FilterType _type;
 };
 
 // --------------------------------------------------------
 typedef Filter::Pointer filter_t;
 
-}
+}  // namespace timefilter
 
 #endif /* !__TIMEFILTER_CORE_H */

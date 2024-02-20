@@ -1,14 +1,12 @@
 /*
- * lex.cpp
+ * compile.cpp
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Monday March 29, 2021
- *
- * Distributed under terms of the MIT license.
+ * Date: Monday May 13, 2024
  */
 
 #include <iostream>
-#include "timefilter/parser.h"
+#include "timefilter/compiler.h"
 #include "moonlight/ansi.h"
 
 using namespace moonlight;
@@ -17,22 +15,22 @@ namespace fg = moonlight::fg;
 
 int main() {
     auto parser = timefilter::Parser();
+    auto compiler = timefilter::Compiler();
     std::string line;
 
     for (;;) {
-        std::cout << fg::magenta("> ");
+        std::cout << fg::green("> ");
         if (! std::getline(std::cin, line)) {
             return 0;
         }
+
         try {
             auto tokens = parser.parse(line);
-            for (auto tk : tokens) {
-                std::cout << token_type_name(tk.type())
-                          << " " << tk << std::endl;
-            }
+            auto filter = compiler.compile_filter(tokens);
+            std::cout << filter->repr() << std::endl;
 
-        } catch (const lex::NoMatchError& e) {
-            std::cout << "no match" << std::endl;
+        } catch (const core::Exception& e) {
+            std::cout << "ERROR: " << e.full_message() << std::endl;
         }
     }
 }

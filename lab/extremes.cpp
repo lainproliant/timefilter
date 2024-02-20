@@ -7,7 +7,7 @@
  * Distributed under terms of the MIT license.
  */
 
-#include "timefilter/core.h"
+#include "moonlight/date.h"
 
 using namespace moonlight::date;
 

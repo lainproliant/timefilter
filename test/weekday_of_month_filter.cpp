@@ -7,10 +7,9 @@
  * Distributed under terms of the MIT license.
  */
 
-#include "moonlight/test.h"
-#include "timefilter/weekday_of_month_filter.h"
-#include <csignal>
 #include <iostream>
+#include "moonlight/test.h"
+#include "timefilter/weekday_of_month.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -34,31 +33,31 @@ int main() {
         auto rangeBB = filterB->next_range(dtB);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
-        assert_true(rangeAA.has_value());
+        ASSERT_TRUE(rangeAA.has_value());
 
         std::cout << "rangeAA = " << *rangeAA << std::endl;
-        assert_equal(*rangeAA, Range(Datetime(2020, Month::January, 8),
+        ASSERT_EQUAL(*rangeAA, Range(Datetime(2020, Month::January, 8),
                                      Datetime(2020, Month::January, 9)));
 
         std::cout << "rangeAB.has_value() = " << rangeAB.has_value() << std::endl;
-        assert_true(rangeAB.has_value());
+        ASSERT_TRUE(rangeAB.has_value());
 
         std::cout << "rangeAB = " << *rangeAB << std::endl;
-        assert_equal(*rangeAB, Range(Datetime(2021, Month::February, 10),
+        ASSERT_EQUAL(*rangeAB, Range(Datetime(2021, Month::February, 10),
                                      Datetime(2021, Month::February, 11)));
 
         std::cout << "rangeBA.has_value() = " << rangeBA.has_value() << std::endl;
-        assert_true(rangeBA.has_value());
+        ASSERT_TRUE(rangeBA.has_value());
 
         std::cout << "rangeBA = " << *rangeBA << std::endl;
-        assert_equal(*rangeBA, Range(Datetime(2020, Month::January, 28),
+        ASSERT_EQUAL(*rangeBA, Range(Datetime(2020, Month::January, 28),
                                      Datetime(2020, Month::January, 29)));
 
         std::cout << "rangeBB.has_value() = " << rangeBB.has_value() << std::endl;
-        assert_true(rangeBB.has_value());
+        ASSERT_TRUE(rangeBB.has_value());
 
         std::cout << "rangeBB = " << *rangeBB << std::endl;
-        assert_equal(*rangeBB, Range(Datetime(2021, Month::January, 26),
+        ASSERT_EQUAL(*rangeBB, Range(Datetime(2021, Month::January, 26),
                                      Datetime(2021, Month::January, 27)));
     })
     .test("prev_range()", [&]() {
@@ -77,31 +76,31 @@ int main() {
         auto rangeBB = filterB->prev_range(dtB);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
-        assert_true(rangeAA.has_value());
+        ASSERT_TRUE(rangeAA.has_value());
 
         std::cout << "rangeAA = " << *rangeAA << std::endl;
-        assert_equal(*rangeAA, Range(Datetime(2019, Month::December, 11),
+        ASSERT_EQUAL(*rangeAA, Range(Datetime(2019, Month::December, 11),
                                      Datetime(2019, Month::December, 12)));
 
         std::cout << "rangeAB.has_value() = " << rangeAB.has_value() << std::endl;
-        assert_true(rangeAB.has_value());
+        ASSERT_TRUE(rangeAB.has_value());
 
         std::cout << "rangeAB = " << *rangeAB << std::endl;
-        assert_equal(*rangeAB, Range(Datetime(2021, Month::January, 13),
+        ASSERT_EQUAL(*rangeAB, Range(Datetime(2021, Month::January, 13),
                                      Datetime(2021, Month::January, 14)));
 
         std::cout << "rangeBA.has_value() = " << rangeBA.has_value() << std::endl;
-        assert_true(rangeBA.has_value());
+        ASSERT_TRUE(rangeBA.has_value());
 
         std::cout << "rangeBA = " << *rangeBA << std::endl;
-        assert_equal(*rangeBA, Range(Datetime(2019, Month::December, 31),
+        ASSERT_EQUAL(*rangeBA, Range(Datetime(2019, Month::December, 31),
                                      Datetime(2020, Month::January, 1)));
 
         std::cout << "rangeBB.has_value() = " << rangeBB.has_value() << std::endl;
-        assert_true(rangeBB.has_value());
+        ASSERT_TRUE(rangeBB.has_value());
 
         std::cout << "rangeBB = " << *rangeBB << std::endl;
-        assert_equal(*rangeBB, Range(Datetime(2020, Month::December, 29),
+        ASSERT_EQUAL(*rangeBB, Range(Datetime(2020, Month::December, 29),
                                      Datetime(2020, Month::December, 30)));
     })
     .run();

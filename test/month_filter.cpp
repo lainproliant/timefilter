@@ -7,10 +7,10 @@
  * Distributed under terms of the MIT license.
  */
 
-#include "moonlight/test.h"
-#include "timefilter/month_filter.h"
 #include <csignal>
 #include <iostream>
+#include "moonlight/test.h"
+#include "timefilter/month_filter.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -19,7 +19,7 @@ using namespace moonlight::test;
 int main() {
     return TestSuite("timefilter month_filter tests")
     .test("next_range()", [&]() {
-        Datetime dt (1988, Month::June, 8);
+        Datetime dt(1988, Month::June, 8);
         auto filterA = MonthFilter::create(Month::June);
         auto filterB = MonthFilter::create(Month::May);
         auto filterC = MonthFilter::create(Month::September);
@@ -30,26 +30,26 @@ int main() {
         auto rangeB = filterB->next_range(dt);
         auto rangeC = filterC->next_range(dt);
 
-        assert_true(rangeA.has_value());
+        ASSERT_TRUE(rangeA.has_value());
         std::cout << "rangeA = " << *rangeA << std::endl;
-        assert_equal(*rangeA, Range(Datetime(1989, Month::June, 1),
+        ASSERT_EQUAL(*rangeA, Range(Datetime(1989, Month::June, 1),
                                     Datetime(1989, Month::July, 1)));
 
-        assert_true(rangeB.has_value());
+        ASSERT_TRUE(rangeB.has_value());
         std::cout << "rangeB = " << *rangeB << std::endl;
-        assert_equal(*rangeB, Range(Datetime(1989, Month::May, 1),
+        ASSERT_EQUAL(*rangeB, Range(Datetime(1989, Month::May, 1),
                                     Datetime(1989, Month::June, 1)));
 
-        assert_true(rangeC.has_value());
+        ASSERT_TRUE(rangeC.has_value());
         std::cout << "rangeC = " << *rangeC << std::endl;
-        assert_equal(*rangeC, Range(Datetime(1988, Month::September, 1),
+        ASSERT_EQUAL(*rangeC, Range(Datetime(1988, Month::September, 1),
                                     Datetime(1988, Month::October, 1)));
     })
     .test("next_range() on month boundaries", [&]() {
-        Datetime dtA (1988, Month::June, 1);
-        Datetime dtB (1988, Month::June, 30);
-        Datetime dtC (1988, Month::February, 29);
-        Datetime dtD (1987, Month::February, 28);
+        Datetime dtA(1988, Month::June, 1);
+        Datetime dtB(1988, Month::June, 30);
+        Datetime dtC(1988, Month::February, 29);
+        Datetime dtD(1987, Month::February, 28);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
@@ -68,51 +68,51 @@ int main() {
         auto rangeBC = filterB->next_range(dtC);
         auto rangeBD = filterB->next_range(dtD);
 
-        assert_true(rangeAA.has_value());
+        ASSERT_TRUE(rangeAA.has_value());
         std::cout << "rangeAA = " << *rangeAA << std::endl;
-        assert_equal(*rangeAA, Range(Datetime(1989, Month::June, 1),
+        ASSERT_EQUAL(*rangeAA, Range(Datetime(1989, Month::June, 1),
                                      Datetime(1989, Month::July, 1)));
 
-        assert_true(rangeAB.has_value());
+        ASSERT_TRUE(rangeAB.has_value());
         std::cout << "rangeAB = " << *rangeAB << std::endl;
-        assert_equal(*rangeAB, Range(Datetime(1989, Month::June, 1),
+        ASSERT_EQUAL(*rangeAB, Range(Datetime(1989, Month::June, 1),
                                      Datetime(1989, Month::July, 1)));
 
-        assert_true(rangeAC.has_value());
+        ASSERT_TRUE(rangeAC.has_value());
         std::cout << "rangeAC = " << *rangeAC << std::endl;
-        assert_equal(*rangeAC, Range(Datetime(1988, Month::June, 1),
+        ASSERT_EQUAL(*rangeAC, Range(Datetime(1988, Month::June, 1),
                                      Datetime(1988, Month::July, 1)));
 
-        assert_true(rangeAD.has_value());
+        ASSERT_TRUE(rangeAD.has_value());
         std::cout << "rangeAD = " << *rangeAD << std::endl;
-        assert_equal(*rangeAD, Range(Datetime(1987, Month::June, 1),
+        ASSERT_EQUAL(*rangeAD, Range(Datetime(1987, Month::June, 1),
                                      Datetime(1987, Month::July, 1)));
 
-        assert_true(rangeBA.has_value());
+        ASSERT_TRUE(rangeBA.has_value());
         std::cout << "rangeBA = " << *rangeBA << std::endl;
-        assert_equal(*rangeBA, Range(Datetime(1989, Month::February, 1),
+        ASSERT_EQUAL(*rangeBA, Range(Datetime(1989, Month::February, 1),
                                      Datetime(1989, Month::March, 1)));
 
-        assert_true(rangeBB.has_value());
+        ASSERT_TRUE(rangeBB.has_value());
         std::cout << "rangeBB = " << *rangeBB << std::endl;
-        assert_equal(*rangeBB, Range(Datetime(1989, Month::February, 1),
+        ASSERT_EQUAL(*rangeBB, Range(Datetime(1989, Month::February, 1),
                                      Datetime(1989, Month::March, 1)));
 
-        assert_true(rangeBC.has_value());
+        ASSERT_TRUE(rangeBC.has_value());
         std::cout << "rangeBC = " << *rangeBC << std::endl;
-        assert_equal(*rangeBC, Range(Datetime(1989, Month::February, 1),
+        ASSERT_EQUAL(*rangeBC, Range(Datetime(1989, Month::February, 1),
                                      Datetime(1989, Month::March, 1)));
 
-        assert_true(rangeBD.has_value());
+        ASSERT_TRUE(rangeBD.has_value());
         std::cout << "rangeBD = " << *rangeBD << std::endl;
-        assert_equal(*rangeBD, Range(Datetime(1988, Month::February, 1),
+        ASSERT_EQUAL(*rangeBD, Range(Datetime(1988, Month::February, 1),
                                      Datetime(1988, Month::March, 1)));
     })
     .test("prev_range() on month boundaries", [&]() {
-        Datetime dtA (1988, Month::June, 1);
-        Datetime dtB (1988, Month::June, 30);
-        Datetime dtC (1988, Month::February, 29);
-        Datetime dtD (1987, Month::February, 28);
+        Datetime dtA(1988, Month::June, 1);
+        Datetime dtB(1988, Month::June, 30);
+        Datetime dtC(1988, Month::February, 29);
+        Datetime dtD(1987, Month::February, 28);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
@@ -131,48 +131,48 @@ int main() {
         auto rangeBC = filterB->prev_range(dtC);
         auto rangeBD = filterB->prev_range(dtD);
 
-        assert_true(rangeAA.has_value());
+        ASSERT_TRUE(rangeAA.has_value());
         std::cout << "rangeAA = " << *rangeAA << std::endl;
-        assert_equal(*rangeAA, Range(Datetime(1988, Month::June, 1),
+        ASSERT_EQUAL(*rangeAA, Range(Datetime(1988, Month::June, 1),
                                      Datetime(1988, Month::July, 1)));
 
-        assert_true(rangeAB.has_value());
+        ASSERT_TRUE(rangeAB.has_value());
         std::cout << "rangeAB = " << *rangeAB << std::endl;
-        assert_equal(*rangeAB, Range(Datetime(1988, Month::June, 1),
+        ASSERT_EQUAL(*rangeAB, Range(Datetime(1988, Month::June, 1),
                                      Datetime(1988, Month::July, 1)));
 
-        assert_true(rangeAC.has_value());
+        ASSERT_TRUE(rangeAC.has_value());
         std::cout << "rangeAC = " << *rangeAC << std::endl;
-        assert_equal(*rangeAC, Range(Datetime(1987, Month::June, 1),
+        ASSERT_EQUAL(*rangeAC, Range(Datetime(1987, Month::June, 1),
                                      Datetime(1987, Month::July, 1)));
 
-        assert_true(rangeAD.has_value());
+        ASSERT_TRUE(rangeAD.has_value());
         std::cout << "rangeAD = " << *rangeAD << std::endl;
-        assert_equal(*rangeAD, Range(Datetime(1986, Month::June, 1),
+        ASSERT_EQUAL(*rangeAD, Range(Datetime(1986, Month::June, 1),
                                      Datetime(1986, Month::July, 1)));
 
-        assert_true(rangeBA.has_value());
+        ASSERT_TRUE(rangeBA.has_value());
         std::cout << "rangeBA = " << *rangeBA << std::endl;
-        assert_equal(*rangeBA, Range(Datetime(1988, Month::February, 1),
+        ASSERT_EQUAL(*rangeBA, Range(Datetime(1988, Month::February, 1),
                                      Datetime(1988, Month::March, 1)));
 
-        assert_true(rangeBB.has_value());
+        ASSERT_TRUE(rangeBB.has_value());
         std::cout << "rangeBB = " << *rangeBB << std::endl;
-        assert_equal(*rangeBB, Range(Datetime(1988, Month::February, 1),
+        ASSERT_EQUAL(*rangeBB, Range(Datetime(1988, Month::February, 1),
                                      Datetime(1988, Month::March, 1)));
 
-        assert_true(rangeBC.has_value());
+        ASSERT_TRUE(rangeBC.has_value());
         std::cout << "rangeBC = " << *rangeBC << std::endl;
-        assert_equal(*rangeBC, Range(Datetime(1988, Month::February, 1),
+        ASSERT_EQUAL(*rangeBC, Range(Datetime(1988, Month::February, 1),
                                      Datetime(1988, Month::March, 1)));
 
-        assert_true(rangeBD.has_value());
+        ASSERT_TRUE(rangeBD.has_value());
         std::cout << "rangeBD = " << *rangeBD << std::endl;
-        assert_equal(*rangeBD, Range(Datetime(1987, Month::February, 1),
+        ASSERT_EQUAL(*rangeBD, Range(Datetime(1987, Month::February, 1),
                                      Datetime(1987, Month::March, 1)));
     })
     .test("prev_range()", [&]() {
-        Datetime dt (1988, Month::June, 8);
+        Datetime dt(1988, Month::June, 8);
         auto filterA = MonthFilter::create(Month::June);
         auto filterB = MonthFilter::create(Month::May);
         auto filterC = MonthFilter::create(Month::September);
@@ -183,19 +183,19 @@ int main() {
         auto rangeB = filterB->prev_range(dt);
         auto rangeC = filterC->prev_range(dt);
 
-        assert_true(rangeA.has_value());
+        ASSERT_TRUE(rangeA.has_value());
         std::cout << "rangeA = " << *rangeA << std::endl;
-        assert_equal(*rangeA, Range(Datetime(1988, Month::June, 1),
+        ASSERT_EQUAL(*rangeA, Range(Datetime(1988, Month::June, 1),
                                     Datetime(1988, Month::July, 1)));
 
-        assert_true(rangeB.has_value());
+        ASSERT_TRUE(rangeB.has_value());
         std::cout << "rangeB = " << *rangeB << std::endl;
-        assert_equal(*rangeB, Range(Datetime(1988, Month::May, 1),
+        ASSERT_EQUAL(*rangeB, Range(Datetime(1988, Month::May, 1),
                                     Datetime(1988, Month::June, 1)));
 
-        assert_true(rangeC.has_value());
+        ASSERT_TRUE(rangeC.has_value());
         std::cout << "rangeC = " << *rangeC << std::endl;
-        assert_equal(*rangeC, Range(Datetime(1987, Month::September, 1),
+        ASSERT_EQUAL(*rangeC, Range(Datetime(1987, Month::September, 1),
                                     Datetime(1987, Month::October, 1)));
     })
     .die_on_signal(SIGSEGV)

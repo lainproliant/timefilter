@@ -7,10 +7,10 @@
  * Distributed under terms of the MIT license.
  */
 
-#include "moonlight/test.h"
-#include "timefilter/range_filter.h"
 #include <csignal>
 #include <iostream>
+#include "moonlight/test.h"
+#include "timefilter/range_filter.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -36,16 +36,16 @@ int main() {
         auto rangeC = filter.next_range(dtC);
 
         std::cout << "rangeA.has_value() = " << rangeA.has_value() << std::endl;
-        assert_true(rangeA.has_value());
+        ASSERT_TRUE(rangeA.has_value());
 
         std::cout << "rangeA = " << *rangeA << std::endl;
-        assert_equal(*rangeA, range);
+        ASSERT_EQUAL(*rangeA, range);
 
         std::cout << "rangeB.has_value() = " << rangeB.has_value() << std::endl;
-        assert_false(rangeB.has_value());
+        ASSERT_FALSE(rangeB.has_value());
 
         std::cout << "rangeC.has_value() = " << rangeC.has_value() << std::endl;
-        assert_false(rangeC.has_value());
+        ASSERT_FALSE(rangeC.has_value());
     })
     .test("prev_range()", [&]() {
         Datetime dtA(1989, Month::June, 8);
@@ -65,19 +65,19 @@ int main() {
         auto rangeC = filter.prev_range(dtC);
 
         std::cout << "rangeA.has_value() = " << rangeA.has_value() << std::endl;
-        assert_false(rangeA.has_value());
+        ASSERT_FALSE(rangeA.has_value());
 
         std::cout << "rangeB.has_value() = " << rangeB.has_value() << std::endl;
-        assert_true(rangeB.has_value());
+        ASSERT_TRUE(rangeB.has_value());
 
         std::cout << "rangeB = " << *rangeB << std::endl;
-        assert_equal(*rangeB, range);
+        ASSERT_EQUAL(*rangeB, range);
 
         std::cout << "rangeC.has_value() = " << rangeC.has_value() << std::endl;
-        assert_true(rangeC.has_value());
+        ASSERT_TRUE(rangeC.has_value());
 
         std::cout << "rangeC = " << *rangeC << std::endl;
-        assert_equal(*rangeC, range);
+        ASSERT_EQUAL(*rangeC, range);
     })
     .die_on_signal(SIGSEGV)
     .run();

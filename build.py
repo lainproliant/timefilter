@@ -10,16 +10,24 @@
 
 from pathlib import Path
 
-from xeno.build import Recipe, build, default, provide, sh, target, factory
+from xeno.build import build, provide, task
+from xeno.recipes import checkout, sh
+from xeno.recipes.cxx import ENV, compile
+
+# -------------------------------------------------------------------
+DEPS = [
+    "https://github.com/lainproliant/moonlight",
+]
 
 INCLUDES = [
     "-I./include",
-    "-I./moonlight/include",
-    "-I./jotdown/include",
-    "-I./moonlight/deps/date/include"
+    "-I./deps/moonlight/include",
+    "-I./deps/moonlight/deps",
+    "-I./deps/moonlight/deps/date/include",
 ]
 
-ENV = dict(
+ENV.update(
+    append="CFLAGS,LDFLAGS",
     CC="clang++",
     CFLAGS=(
         "-g",
@@ -32,57 +40,62 @@ ENV = dict(
     LDFLAGS=("-rdynamic", "-g", "-ldl", "-lpthread"),
 )
 
-# -------------------------------------------------------------------
-@provide
-def submodules():
-    return sh("git submodule update --init --recursive")
 
-# -------------------------------------------------------------------
-@factory
-def compile_test(src, headers):
-    return sh(
-        "{CC} {CFLAGS} {src} {LDFLAGS} -o {output}",
-        env=ENV,
-        src=src,
-        output=Path(src).with_suffix(""),
-        requires=headers,
-    )
+# --------------------------------------------------------------------
+@task(keep=True)
+def deps():
+    """Fetch third-party repos."""
+    return [checkout(repo) for repo in DEPS]
+
 
 # -------------------------------------------------------------------
 @provide
 def test_sources():
     return Path.cwd().glob("test/*.cpp")
 
+
 # -------------------------------------------------------------------
 @provide
 def lab_sources():
     return Path.cwd().glob("lab/*.cpp")
+
 
 # -------------------------------------------------------------------
 @provide
 def headers():
     return Path.cwd().glob("include/timefilter/*.h")
 
-# -------------------------------------------------------------------
-@target
-async def tests(test_sources, headers, submodules):
-    return Recipe([compile_test(src, headers) for src in test_sources], setup=submodules)
 
 # -------------------------------------------------------------------
-@target
-async def labs(lab_sources, headers, submodules):
-    await submodules.resolve()
-    return [compile_test(src, headers) for src in lab_sources]
+@task(dep="deps")
+def tests(test_sources, headers, deps):
+    return [compile(src, headers=headers) for src in test_sources]
+
 
 # -------------------------------------------------------------------
-@target
+@task(dep="deps")
+def labs(lab_sources, headers, deps):
+    return [compile(src, headers=headers) for src in lab_sources]
+
+
+# -------------------------------------------------------------------
+@task
 def run_tests(tests):
-    return tuple(sh("{input}", input=test, cwd="test") for test in tests)
+    return tuple(sh(f"{test.target}", test=test, cwd="test") for test in tests)
+
 
 # -------------------------------------------------------------------
-@default
+@task(default=True)
 def all(run_tests, labs):
     return [run_tests, labs]
+
+
+# -------------------------------------------------------------------
+@task
+def cc_json():
+    """Generate compile_commands.json for IDEs."""
+    return sh("intercept-build ./build.py compile:\\* -R; ./build.py -c compile:\\*")
+
 
 # -------------------------------------------------------------------
 if __name__ == "__main__":

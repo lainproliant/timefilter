@@ -10,12 +10,21 @@
 #ifndef __TIMEFILTER_PARSER_H
 #define __TIMEFILTER_PARSER_H
 
+#include <memory>
+#include <set>
+#include <vector>
+#include <map>
+#include <string>
+#include <deque>
+#include <algorithm>
+
 #include "moonlight/lex.h"
 #include "moonlight/date.h"
 #include "moonlight/linked_map.h"
 #include "moonlight/maps.h"
 #include "moonlight/string.h"
 #include "moonlight/json.h"
+#include "moonlight/automata.h"
 #include "timefilter/filters.h"
 
 namespace timefilter {
@@ -31,98 +40,104 @@ class CompilerError : public Error {
 
 // ------------------------------------------------------------------
 class I18nStrings {
-public:
-    I18nStrings(const json::Object& obj) :
-    _short_months(obj.get<json::Array>("short_months", format_months("%b")).extract<std::string>()),
-    _long_months(obj.get<json::Array>("long_months", format_months("%B")).extract<std::string>()),
-    _short_weekdays(obj.get<json::Array>("short_weekdays", format_weekdays("%a")).extract<std::string>()),
-    _long_weekdays(obj.get<json::Array>("long_weekdays", format_weekdays("%A")).extract<std::string>()),
-    _short_month_rx(make_rx(_short_months)),
-    _long_month_rx(make_rx(_long_months)),
-    _short_weekday_rx(make_rx(_short_weekdays)),
-    _long_weekday_rx(make_rx(_long_weekdays)) {}
+ public:
+     explicit I18nStrings(const json::Object& obj) :
+     _short_months(obj.get<json::Array>("short_months", format_months("%b")).extract<std::string>()),
+     _long_months(obj.get<json::Array>("long_months", format_months("%B")).extract<std::string>()),
+     _short_weekdays(obj.get<json::Array>("short_weekdays", format_weekdays("%a")).extract<std::string>()),
+     _long_weekdays(obj.get<json::Array>("long_weekdays", format_weekdays("%A")).extract<std::string>()),
+     _short_month_rx(make_rx(_short_months)),
+     _long_month_rx(make_rx(_long_months)),
+     _short_weekday_rx(make_rx(_short_weekdays)),
+     _long_weekday_rx(make_rx(_long_weekdays)) {}
 
-    I18nStrings() : I18nStrings(json::Object()) { }
+     I18nStrings() : I18nStrings(json::Object()) { }
 
-    static const I18nStrings& defaults() {
-        static const I18nStrings i18n;
-        return i18n;
-    }
+     static const I18nStrings& defaults() {
+         static const I18nStrings i18n;
+         return i18n;
+     }
 
-    std::string short_weekday_rx() const {
-        return _short_weekday_rx;
-    }
+     std::string short_weekday_rx() const {
+         return _short_weekday_rx;
+     }
 
-    const std::string& long_weekday_rx() const {
-        return _long_weekday_rx;
-    }
+     const std::string& long_weekday_rx() const {
+         return _long_weekday_rx;
+     }
 
-    const std::string& short_month_rx() const {
-        return _short_month_rx;
-    }
+     const std::string& short_month_rx() const {
+         return _short_month_rx;
+     }
 
-    const std::string& long_month_rx() const {
-        return _long_month_rx;
-    }
+     const std::string& long_month_rx() const {
+         return _long_month_rx;
+     }
 
-    Weekday weekday(const std::string& s) const {
-        for (size_t x = 0; x < 7; x++) {
-            if (to_lower(s) == to_lower(_short_weekdays[x]) ||
-                to_lower(s) == to_lower(_long_weekdays[x])) {
-                return static_cast<Weekday>(x);
-            }
-        }
-        throw ValueError("Unknown weekday: " + s);
-    }
+     Weekday weekday(const std::string& s) const {
+         for (size_t x = 0; x < 7; x++) {
+             if (to_lower(s) == to_lower(_short_weekdays[x]) ||
+                 to_lower(s) == to_lower(_long_weekdays[x])) {
+                 return static_cast<Weekday>(x);
+             }
+         }
+         throw ValueError("Unknown weekday: " + s);
+     }
 
-    Month month(const std::string& s) const {
-        for (size_t x = 0; x < 12; x++) {
-            if (to_lower(s) == to_lower(_short_months[x]) ||
-                to_lower(s) == to_lower(_long_months[x])) {
-                return static_cast<Month>(x);
-            }
-        }
-        throw ValueError("Unknown month: " + s);
-    }
+     Month month(const std::string& s) const {
+         for (size_t x = 0; x < 12; x++) {
+             if (to_lower(s) == to_lower(_short_months[x]) ||
+                 to_lower(s) == to_lower(_long_months[x])) {
+                 return static_cast<Month>(x);
+             }
+         }
+         throw ValueError("Unknown month: " + s);
+     }
 
-private:
-    static std::vector<std::string> format_weekdays(const std::string& fmt) {
-        std::vector<std::string> weekday_to_format;
-        const auto start_date = moonlight::date::Date(2021, 3, 28);
-        for (int x = 0; x < 7; x++) {
-            auto dt = moonlight::date::Datetime(start_date.advance_days(x));
-            weekday_to_format.push_back(dt.format(fmt));
-        }
-        return weekday_to_format;
-    }
+ private:
+     static std::vector<std::string> format_weekdays(const std::string& fmt) {
+         std::vector<std::string> weekday_to_format;
+         const auto start_date = moonlight::date::Date(2021, 3, 28);
+         for (int x = 0; x < 7; x++) {
+             auto dt = moonlight::date::Datetime(start_date.advance_days(x));
+             weekday_to_format.push_back(dt.format(fmt));
+         }
+         return weekday_to_format;
+     }
 
-    static std::vector<std::string> format_months(const std::string& fmt) {
-        std::vector<std::string> month_to_format;
-        for (auto date = moonlight::date::Date(2021, 1, 1);
-             date.year() < 2022;
-             date = date.next_month()) {
-            auto dt = moonlight::date::Datetime(date);
-            month_to_format.push_back(dt.format(fmt));
-        }
+     static std::vector<std::string> format_months(const std::string& fmt) {
+         std::vector<std::string> month_to_format;
+         for (auto date = moonlight::date::Date(2021, 1, 1);
+              date.year() < 2022;
+              date = date.next_month()) {
+             auto dt = moonlight::date::Datetime(date);
+             month_to_format.push_back(dt.format(fmt));
+         }
 
-        return month_to_format;
-    }
+         return month_to_format;
+     }
 
-    template<class T>
-    static std::string make_rx(const T& values) {
-        std::ostringstream sb;
-        sb << "(" << moonlight::str::join(values, "|") << ")";
-        return sb.str();
-    }
+     template<class T>
+     static std::string make_rx(const T& values) {
+         std::ostringstream sb;
+         sb << "(" << moonlight::str::join(values, "|") << ")";
+         return sb.str();
+     }
 
-    const std::vector<std::string> _short_months;
-    const std::vector<std::string> _long_months;
-    const std::vector<std::string> _short_weekdays;
-    const std::vector<std::string> _long_weekdays;
-    const std::string _short_month_rx;
-    const std::string _long_month_rx;
-    const std::string _short_weekday_rx;
-    const std::string _long_weekday_rx;
+     const std::vector<std::string> _short_months;
+     const std::vector<std::string> _long_months;
+     const std::vector<std::string> _short_weekdays;
+     const std::vector<std::string> _long_weekdays;
+     const std::string _short_month_rx;
+     const std::string _long_month_rx;
+     const std::string _short_weekday_rx;
+     const std::string _long_weekday_rx;
+};
+
+// ------------------------------------------------------------------
+enum Operator {
+    RANGE_DASH,
+    RANGE_PLUS
 };
 
 // ------------------------------------------------------------------
@@ -134,32 +149,34 @@ inline lex::Grammar::Pointer make_grammar(const I18nStrings& i18n) {
     const std::string term = "([^\\w\\d]|$)";
 
     root
-        ->def(lex::ignore("\\s+"))
-        ->def(lex::match(tfm::format("([0-9]{1,2}) %s ([0-9]{4,})", i18n.long_month_rx())).icase(), "dmy_long")
-        ->def(lex::match(tfm::format("([0-9]{1,2}) %s ([0-9]{4,})", i18n.short_month_rx())).icase(), "dmy_short")
-        ->def(lex::match(tfm::format("%s ([0-9]{1,2}) ([0-9]{4,})", i18n.long_month_rx())).icase(), "mdy_long")
-        ->def(lex::match(tfm::format("%s ([0-9]{1,2}) ([0-9]{4,})", i18n.short_month_rx())).icase(), "mdy_short")
-        ->def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.long_month_rx())).icase(), "my_long")
-        ->def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.short_month_rx())).icase(), "my_short")
-        ->def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.long_month_rx())).icase(), "ym_long")
-        ->def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.short_month_rx())).icase(), "ym_short")
-        ->def(lex::match(tfm::format("([0-9]{1,2}) %s", i18n.long_month_rx())).icase(), "dm_long")
-        ->def(lex::match(tfm::format("([0-9]{1,2}) %s", i18n.short_month_rx())).icase(), "dm_short")
-        ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.long_month_rx())).icase(), "md_long")
-        ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.short_month_rx())).icase(), "md_short")
-        ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.long_weekday_rx())).icase(), "weekday_monthday_long")
-        ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.short_weekday_rx())).icase(), "weekday_monthday_short")
-        ->def(lex::match(i18n.long_month_rx() + term).icase(), "month_long")
-        ->def(lex::match(i18n.short_month_rx() + term).icase(), "month_short")
-        ->def(lex::match(i18n.long_weekday_rx() + term).icase(), "weekday_long")
-        ->def(lex::match(i18n.short_weekday_rx() + term).icase(), "weekday_short")
-        ->def(lex::match("([0-9]{4,})-([0-9]{2})-([0-9]{2})"), "iso_date")
-        ->def(lex::match("([0-9]{1,2})/([0-9]{1,2})/([0-9]{4,})"), "us_date")
-        ->def(lex::match("([0-9]{1,2})([0-9]{2})h"), "mil_time")
-        ->def(lex::match("([0-9]{1,2}):([0-9]{2})\\s?(am|pm|a|p)").icase(), "h12_time")
-        ->def(lex::match("([0-9]{1,2}):([0-9]{2})"), "h24_time")
-        ->def(lex::match("[0-9]{4,}" + term), "year")
-        ->def(lex::match("[MTWHFSU]{1,7}"), "weekdays");
+    ->def(lex::ignore("\\s+"))
+    ->def(lex::match(tfm::format("([0-9]{1,2}) %s ([0-9]{4,})", i18n.long_month_rx())).icase(), "dmy_long")
+    ->def(lex::match(tfm::format("([0-9]{1,2}) %s ([0-9]{4,})", i18n.short_month_rx())).icase(), "dmy_short")
+    ->def(lex::match(tfm::format("%s ([0-9]{1,2}) ([0-9]{4,})", i18n.long_month_rx())).icase(), "mdy_long")
+    ->def(lex::match(tfm::format("%s ([0-9]{1,2}) ([0-9]{4,})", i18n.short_month_rx())).icase(), "mdy_short")
+    ->def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.long_month_rx())).icase(), "my_long")
+    ->def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.short_month_rx())).icase(), "my_short")
+    ->def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.long_month_rx())).icase(), "ym_long")
+    ->def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.short_month_rx())).icase(), "ym_short")
+    ->def(lex::match(tfm::format("([0-9]{1,2}) %s", i18n.long_month_rx())).icase(), "dm_long")
+    ->def(lex::match(tfm::format("([0-9]{1,2}) %s", i18n.short_month_rx())).icase(), "dm_short")
+    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.long_month_rx())).icase(), "md_long")
+    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.short_month_rx())).icase(), "md_short")
+    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.long_weekday_rx())).icase(), "weekday_monthday_long")
+    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.short_weekday_rx())).icase(), "weekday_monthday_short")
+    ->def(lex::match(i18n.long_month_rx() + term).icase(), "month_long")
+    ->def(lex::match(i18n.short_month_rx() + term).icase(), "month_short")
+    ->def(lex::match(i18n.long_weekday_rx() + term).icase(), "weekday_long")
+    ->def(lex::match(i18n.short_weekday_rx() + term).icase(), "weekday_short")
+    ->def(lex::match("([0-9]{4,})-([0-9]{2})-([0-9]{2})"), "iso_date")
+    ->def(lex::match("([0-9]{1,2})/([0-9]{1,2})/([0-9]{4,})"), "us_date")
+    ->def(lex::match("([0-9]{1,2})([0-9]{2})h"), "mil_time")
+    ->def(lex::match("([0-9]{1,2}):([0-9]{2})\\s?(am|pm|a|p)").icase(), "h12_time")
+    ->def(lex::match("([0-9]{1,2}):([0-9]{2})"), "h24_time")
+    ->def(lex::match("[0-9]{4,}" + term), "year")
+    ->def(lex::match("[MTWHFSU]{1,7}"), "weekdays")
+    ->def(lex::match("-"), "op_range_dash")
+    ->def(lex::match("+"), "op_range_plus");
 
     return root;
 }
@@ -357,43 +374,93 @@ inline std::map<std::string, FilterFactory> make_factories() {
 
 // ------------------------------------------------------------------
 class Parser {
-public:
-    Parser(const I18nStrings& i18n = I18nStrings::defaults())
-    : _i18n(i18n), _lex(lex::Lexer()), _grammar(make_grammar(i18n)) { }
+ public:
+     explicit Parser(const I18nStrings& i18n = I18nStrings::defaults())
+     : _i18n(i18n), _lex(lex::Lexer()), _grammar(make_grammar(i18n)) { }
 
-    std::vector<lex::Token> parse(const std::string& expr) const {
-        return _lex.lex(_grammar, expr);
-    }
+     std::vector<lex::Token> parse(const std::string& expr) const {
+         return _lex.lex(_grammar, expr);
+     }
 
-private:
-    const I18nStrings _i18n;
-    const lex::Lexer _lex;
-    const lex::Grammar::Pointer _grammar;
+ private:
+     const I18nStrings _i18n;
+     const lex::Lexer _lex;
+     const lex::Grammar::Pointer _grammar;
 };
 
 // ------------------------------------------------------------------
 class Compiler {
-public:
-    Compiler(
-        const I18nStrings& i18n,
-        const std::map<std::string, FilterFactory>& factories)
-    : _i18n(i18n), _factories(factories) { }
+ public:
+     Compiler(
+         const I18nStrings& i18n,
+         const std::map<std::string, FilterFactory>& factories)
+     : _i18n(i18n), _factories(factories) { }
 
-    Filter::Pointer compile(const std::vector<moonlight::lex::Token>& tokens) const {
-        auto list = ListFilter::create();
-        for (auto token : tokens) {
-            auto iter = _factories.find(token.type());
-            if (iter == _factories.end()) {
-                throw CompilerError(tfm::format("Missing token factory for type %s", token.type()));
-            }
-            list->push(iter->second(_i18n, token));
-        }
-        return list;
-    }
+     Filter::Pointer compile(const std::vector<moonlight::lex::Token>& tokens) const {
+         auto list = ListFilter::create();
 
-private:
-    const timefilter::I18nStrings _i18n;
-    const std::map<std::string, FilterFactory> _factories;
+         struct Context {
+             std::deque<Filter::Pointer> filters;
+             std::deque<moonlight::lex::Token> tokens;
+         };
+
+         Context ctx;
+         std::copy(tokens.begin(), tokens.end(), std::back_inserter(ctx.tokens));
+
+         enum CompileState {
+             EXPRESSION,
+             RANGE_PLUS,
+             RANGE_DASH
+         };
+
+         auto machine = moonlight::automata::Lambda<Context, CompileState>::builder(ctx)
+         .init(CompileState::EXPRESSION)
+         .state("expression", [&](auto& m) {
+             if (ctx.tokens.empty()) {
+                 m.pop();
+                 return;
+             }
+
+             auto token = ctx.tokens.front();
+             ctx.tokens.pop_front();
+
+             if (token.type() == "op_range_plus") {
+                 auto lhs_list = ListFilter::create(ctx.filters);
+                 ctx.filters.clear();
+                 m.transition("range_plus");
+                 m.push("expression");
+                 return;
+
+             } else if (token.type() == "op_range_dash") {
+                 auto lhs_list = ListFilter::create(ctx.filters);
+                 ctx.filters.clear();
+                 m.transition("range_dash");
+                 m.push("expression");
+                 return;
+             }
+
+             if (! _factories.contains(token.type())) {
+                 throw CompilerError(tfm::format("No filter factory found for type '%s'.", token.type()));
+             }
+
+             auto filter = _factories.at(token.type())(_i18n, token);
+             ctx.filters.push_back(filter);
+         })
+         .state("range_plus", [&](auto& m) {
+
+
+         })
+         .state("range_dash", [&](auto& m) {
+
+         })
+         .build();
+
+         return list;
+     }
+
+
+     const timefilter::I18nStrings _i18n;
+     const std::map<std::string, FilterFactory> _factories;
 };
 
 // ------------------------------------------------------------------
@@ -403,6 +470,6 @@ inline Filter::Pointer eval(const std::string& expr, const I18nStrings& i18n = I
     return compiler.compile(parser.parse(expr));
 }
 
-}
+}  // namespace timefilter
 
 #endif /* !__TIMEFILTER_PARSER_H */

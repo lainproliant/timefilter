@@ -7,21 +7,21 @@
  * Distributed under terms of the MIT license.
  */
 
+#include <iostream>
 #include "timefilter/parser.h"
 #include "moonlight/ansi.h"
-#include <iostream>
 
 using namespace moonlight;
 using namespace moonlight::date;
 
 int main() {
-    auto lex = lex::Lexer().throw_on_scan_failure(false);
+    auto lex = lex::Lexer().throw_on_error(false);
     timefilter::I18nStrings i18n;
     auto grammar = timefilter::make_grammar(i18n);
     auto compiler = timefilter::Compiler(i18n, timefilter::make_factories());
     std::string line;
 
-    for(;;) {
+    for (;;) {
         std::cout << fg::magenta("> ");
         if (! std::getline(std::cin, line)) {
             return 0;

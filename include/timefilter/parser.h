@@ -135,17 +135,42 @@ class I18nStrings {
 };
 
 // ------------------------------------------------------------------
-enum Operator {
-    RANGE_DASH,
-    RANGE_PLUS
-};
-
-// ------------------------------------------------------------------
 typedef std::function<Filter::Pointer(const I18nStrings&, const moonlight::lex::Token&)> FilterFactory;
 
 // ------------------------------------------------------------------
-inline lex::Grammar::Pointer make_grammar(const I18nStrings& i18n) {
-    auto root = lex::Grammar::create();
+enum TokenType {
+    DAY_MONTH_YEAR_SHORT,
+    DAY_MONTH_YEAR_LONG,
+    MONTH_DAY_YEAR_SHORT,
+    MONTH_DAY_YEAR_LONG,
+    MONTH_YEAR_SHORT,
+    MONTH_YEAR_LONG,
+    YEAR_MONTH_SHORT,
+    YEAR_MONTH_LONG,
+    DAY_MONTH_SHORT,
+    DAY_MONTH_LONG,
+    WEEKDAY_MONTHDAY_SHORT,
+    WEEKDAY_MONTHDAY_LONG,
+    MONTH_LONG,
+    MONTH_SHORT,
+    WEEKDAY_LONG,
+    WEEKDAY_SHORT,
+    ISO_DATE,
+    US_DATE,
+    MIL_TIME,
+    H12_TIME,
+    H24_TIME,
+    YEAR,
+    WEEKDAYS,
+    OP_RANGE_DASH,
+    OP_RANGE_PLUS
+};
+
+using Grammar = lex::Grammar<TokenType>;
+
+// ------------------------------------------------------------------
+inline Grammar::Pointer make_grammar(const I18nStrings& i18n) {
+    auto root = Grammar::create();
     const std::string term = "([^\\w\\d]|$)";
 
     root
@@ -385,7 +410,7 @@ class Parser {
  private:
      const I18nStrings _i18n;
      const lex::Lexer _lex;
-     const lex::Grammar::Pointer _grammar;
+     const Grammar::Pointer _grammar;
 };
 
 // ------------------------------------------------------------------
@@ -414,8 +439,8 @@ class Compiler {
          };
 
          auto machine = moonlight::automata::Lambda<Context, CompileState>::builder(ctx)
-         .init(CompileState::EXPRESSION)
-         .state("expression", [&](auto& m) {
+         .init(EXPRESSION)
+         .state(EXPRESSION, [&](auto& m) {
              if (ctx.tokens.empty()) {
                  m.pop();
                  return;
@@ -424,36 +449,56 @@ class Compiler {
              auto token = ctx.tokens.front();
              ctx.tokens.pop_front();
 
-             if (token.type() == "op_range_plus") {
-                 auto lhs_list = ListFilter::create(ctx.filters);
-                 ctx.filters.clear();
-                 m.transition("range_plus");
-                 m.push("expression");
-                 return;
-
-             } else if (token.type() == "op_range_dash") {
-                 auto lhs_list = ListFilter::create(ctx.filters);
-                 ctx.filters.clear();
-                 m.transition("range_dash");
-                 m.push("expression");
-                 return;
-             }
-
-             if (! _factories.contains(token.type())) {
-                 throw CompilerError(tfm::format("No filter factory found for type '%s'.", token.type()));
-             }
-
-             auto filter = _factories.at(token.type())(_i18n, token);
-             ctx.filters.push_back(filter);
-         })
-         .state("range_plus", [&](auto& m) {
-
 
          })
-         .state("range_dash", [&](auto& m) {
+         .state(RANGE_PLUS, [&](auto& m) {
+
+         })
+         .state(RANGE_DASH, [&](auto& m) {
 
          })
          .build();
+
+/*         auto machine = moonlight::automata::Lambda<Context, CompileState>::builder(ctx)*/
+/*         .init(CompileState::EXPRESSION)*/
+/*         .state(CompileState::EXPRESSION, [&](auto& m) {*/
+/*             if (ctx.tokens.empty()) {*/
+/*                 m.pop();*/
+/*                 return;*/
+/*             }*/
+/**/
+/*             auto token = ctx.tokens.front();*/
+/*             ctx.tokens.pop_front();*/
+/**/
+/*             if (token.type() == "op_range_plus") {*/
+/*                 auto lhs_list = ListFilter::create(ctx.filters);*/
+/*                 ctx.filters.clear();*/
+/*                 m.transition("range_plus");*/
+/*                 m.push("expression");*/
+/*                 return;*/
+/**/
+/*             } else if (token.type() == "op_range_dash") {*/
+/*                 auto lhs_list = ListFilter::create(ctx.filters);*/
+/*                 ctx.filters.clear();*/
+/*                 m.transition("range_dash");*/
+/*                 m.push("expression");*/
+/*                 return;*/
+/*             }*/
+/**/
+/*             if (! _factories.contains(token.type())) {*/
+/*                 throw CompilerError(tfm::format("No filter factory found for type '%s'.", token.type()));*/
+/*             }*/
+/**/
+/*             auto filter = _factories.at(token.type())(_i18n, token);*/
+/*             ctx.filters.push_back(filter);*/
+/*         })*/
+/*         .state("range_plus", [&](auto& m) {*/
+/**/
+/*         })*/
+/*         .state("range_dash", [&](auto& m) {*/
+/**/
+/*         })*/
+/*         .build();*/
 
          return list;
      }

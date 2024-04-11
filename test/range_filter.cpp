@@ -10,7 +10,7 @@
 #include <csignal>
 #include <iostream>
 #include "moonlight/test.h"
-#include "timefilter/range_filter.h"
+#include "timefilter/filters.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -25,7 +25,7 @@ int main() {
         Range range = Range(Datetime(1990, Month::January, 1),
                             Datetime(1991, Month::December, 1));
 
-        auto filter = RangeFilter(range);
+        auto filter = StaticRangeFilter(range);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;
@@ -54,7 +54,7 @@ int main() {
         Range range = Range(Datetime(1990, Month::January, 1),
                             Datetime(1991, Month::December, 1));
 
-        auto filter = RangeFilter(range);
+        auto filter = StaticRangeFilter(range);
 
         std::cout << "dtA = " << dtA << std::endl;
         std::cout << "dtB = " << dtB << std::endl;

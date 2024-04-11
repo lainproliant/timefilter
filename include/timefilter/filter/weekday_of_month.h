@@ -12,7 +12,9 @@
 
 #include <memory>
 #include <string>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
+#include "timefilter/filter/list.h"
+#include "timefilter/filter/time.h"
 
 namespace timefilter {
 
@@ -49,6 +51,13 @@ class WeekdayOfMonthFilter : public Filter {
               date = date.prev_month(), month_weekday = find(date)) { }
 
          return Range::for_days(month_weekday.value(), 1);
+     }
+
+     filter_t discrete() const override {
+         return ListFilter::create({
+             this->shared_from_this(),
+             TimeFilter::create(Time(0, 0))
+         });
      }
 
  protected:

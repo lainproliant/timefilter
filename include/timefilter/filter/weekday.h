@@ -15,7 +15,9 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
+#include "timefilter/filter/list.h"
+#include "timefilter/filter/time.h"
 #include "moonlight/variadic.h"
 
 namespace timefilter {
@@ -56,6 +58,13 @@ class WeekdayFilter : public Filter {
              date--;
          }
          return Range::for_days(date, 1);
+     }
+
+     filter_t discrete() const override {
+         return ListFilter::create({
+             this->shared_from_this(),
+             TimeFilter::create(Time(0, 0))
+         });
      }
 
  protected:

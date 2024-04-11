@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
 #include "moonlight/variadic.h"
 
 namespace timefilter {
@@ -48,6 +48,10 @@ class TimeFilter : public Filter {
 
      std::optional<Range> prev_range(const Datetime& pivot) const override {
          return range(get_prev_daytime(pivot), pivot.zone());
+     }
+
+     bool is_discrete() const override {
+         return true;
      }
 
  protected:

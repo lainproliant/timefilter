@@ -10,8 +10,7 @@
 #include <csignal>
 #include <iostream>
 #include "moonlight/test.h"
-#include "timefilter/range_filter.h"
-#include "timefilter/duration_filter.h"
+#include "timefilter/filters.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -24,7 +23,7 @@ int main() {
         Datetime dtA(1988, Month::June, 8, 12, 00);
         Datetime dtPivot(1980, Month::January, 1);
 
-        auto filterA = RangeFilter::create(dtA, dtA + seconds(1));
+        auto filterA = StaticRangeFilter::create(dtA, dtA + seconds(1));
         auto rangeA = filterA->next_range(dtPivot);
         std::cout << "rangeA = " << rangeA.value() << ", " << rangeA->duration() << std::endl;
         ASSERT_EQUAL(rangeA->duration(), seconds(1));
@@ -38,7 +37,7 @@ int main() {
         Datetime dtA(1988, Month::June, 8, 12, 00);
         Datetime dtPivot(2525, Month::January, 1);
 
-        auto filterA = RangeFilter::create(dtA, dtA + seconds(1));
+        auto filterA = StaticRangeFilter::create(dtA, dtA + seconds(1));
         auto rangeA = filterA->prev_range(dtPivot);
         std::cout << "rangeA = " << rangeA.value() << ", " << rangeA->duration() << std::endl;
         ASSERT_EQUAL(rangeA->duration(), seconds(1));

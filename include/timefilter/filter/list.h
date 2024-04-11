@@ -16,14 +16,12 @@
 #include <algorithm>
 #include <vector>
 #include "moonlight/collect.h"
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
 
 namespace timefilter {
 
 // ------------------------------------------------------------------
-class ListFilterValidationError : public Error {
-    using Error::Error;
-};
+EXCEPTION_SUBTYPE(Error, ListFilterValidationError);
 
 // ------------------------------------------------------------------
 typedef std::vector<Filter::Pointer>::const_iterator ListIterator;
@@ -143,7 +141,7 @@ class ListFilter : public Filter {
          return std::make_shared<ListFilter>();
      }
 
-     template<class C>
+     template<class C = std::initializer_list<std::shared_ptr<const Filter>>>
      static std::shared_ptr<ListFilter> create(const C& stack) {
          std::vector<Filter::Pointer> vec;
          for (auto filter : stack) {
@@ -166,7 +164,7 @@ class ListFilter : public Filter {
      ListFilter& push(Filter::Pointer filter) {
          std::vector<Filter::Pointer> filters(_stack);
          if (filter->type() == FilterType::List) {
-             auto list = static_pointer_cast<ListFilter>(filter);
+             auto list = static_pointer_cast<const ListFilter>(filter);
              std::copy(list->_stack.begin(), list->_stack.end(), std::back_inserter(filters));
 
          } else {
@@ -174,6 +172,15 @@ class ListFilter : public Filter {
          }
          _stack = sort_and_validate(filters);
          return *this;
+     }
+
+     filter_t discrete() const override {
+         std::vector<filter_t> filters;
+         std::copy(_stack.begin(), _stack.end(), std::back_inserter(filters));
+         filter_t final_filter = filters.back();
+         filters.pop_back();
+         filters.push_back(final_filter->discrete());
+         return ListFilter::create(filters);
      }
 
  protected:
@@ -208,6 +215,16 @@ class ListFilter : public Filter {
 
      StackViewFilter view() const {
          return StackViewFilter(_stack.begin(), _stack.end());
+     }
+
+     bool is_discrete() const override {
+         for (auto filter : _stack) {
+             if (filter->is_discrete()) {
+                 return true;
+             }
+         }
+
+         return false;
      }
 
      std::vector<Filter::Pointer> _stack;

@@ -28,16 +28,15 @@ INCLUDES = [
 
 ENV.update(
     append="CFLAGS,LDFLAGS",
-    CC="clang++",
     CFLAGS=(
-        "-g",
+        "-Wall",
+        "-fpermissive",  # needed for g++ to respect "always_false<T>"
         *INCLUDES,
-        "--std=c++2a",
-        "-DMOONLIGHT_DEBUG",
         "-DMOONLIGHT_ENABLE_STACKTRACE",
         "-DMOONLIGHT_STACKTRACE_IN_DESCRIPTION",
+        "--std=c++2a",
     ),
-    LDFLAGS=("-rdynamic", "-g", "-ldl", "-lpthread"),
+    LDFLAGS=("-g", "-ldl", "-lpthread"),
 )
 
 

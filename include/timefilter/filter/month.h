@@ -15,7 +15,10 @@
 #include <vector>
 #include <algorithm>
 #include <set>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
+#include "timefilter/filter/list.h"
+#include "timefilter/filter/monthday.h"
+#include "timefilter/filter/time.h"
 #include "moonlight/variadic.h"
 
 namespace timefilter {
@@ -61,6 +64,14 @@ class MonthFilter : public Filter {
               date = date.prev_month()) { }
 
          return range(date, pivot.zone());
+     }
+
+     filter_t discrete() const override {
+         return ListFilter::create({
+             this->shared_from_this(),
+             MonthdayFilter::create(1),
+             TimeFilter::create(Time(0, 0))
+         });
      }
 
  protected:

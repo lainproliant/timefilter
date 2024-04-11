@@ -10,7 +10,7 @@
 #include <csignal>
 #include <iostream>
 #include "moonlight/test.h"
-#include "timefilter/year_filter.h"
+#include "timefilter/filters.h"
 
 using namespace timefilter;
 using namespace moonlight;

@@ -13,7 +13,7 @@
 #include <memory>
 #include <algorithm>
 #include <vector>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
 #include "moonlight/collect.h"
 
 namespace timefilter {

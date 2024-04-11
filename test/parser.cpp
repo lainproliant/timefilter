@@ -9,6 +9,7 @@
 
 #include "moonlight/test.h"
 #include "timefilter/parser.h"
+#include "timefilter/filters.h"
 
 using namespace timefilter;
 using namespace moonlight;

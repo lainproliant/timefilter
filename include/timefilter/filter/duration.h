@@ -11,16 +11,11 @@
 #define __TIMEFILTER_DURATION_FILTER_H
 
 #include <memory>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
 
 namespace timefilter {
 
-
-// ------------------------------------------------------------------
-class DurationFilterValidationError : public Error {
-    using Error::Error;
-};
-
+EXCEPTION_SUBTYPE(Error, DurationFilterValidationError);
 
 // ------------------------------------------------------------------
 class DurationFilter : public Filter {
@@ -57,6 +52,11 @@ class DurationFilter : public Filter {
          if (_duration <= Duration::zero()) {
              throw DurationFilterValidationError(
                  "Duration must be greater than zero.");
+         }
+
+         if (! _base_filter->is_discrete()) {
+             throw DurationFilterValidationError(
+                 "Duration is ambiguous for non-discrete filters.");
          }
      }
 

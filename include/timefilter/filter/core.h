@@ -33,15 +33,15 @@ namespace timefilter {
 using namespace moonlight::date;
 
 // --------------------------------------------------------
-class Error : public moonlight::core::Exception {
-    using Exception::Exception;
-};
+EXCEPTION_TYPE(Error);
+EXCEPTION_SUBTYPE(Error, CannotMakeDiscreteError);
 
 // --------------------------------------------------------
 enum class FilterType {
     Month,
     Monthday,
     Range,
+    StaticRange,
     List,
     Time,
     Weekday,
@@ -65,7 +65,7 @@ enum class FilterOrder {
 // --------------------------------------------------------
 class Filter : public std::enable_shared_from_this<Filter> {
  public:
-    typedef std::shared_ptr<Filter> Pointer;
+    typedef std::shared_ptr<const Filter> Pointer;
 
     explicit Filter(FilterType type) : _type(type) { }
     virtual ~Filter() {  }
@@ -75,7 +75,7 @@ class Filter : public std::enable_shared_from_this<Filter> {
         static std::map<FilterType, std::string> NAME_TABLE = {
             {FilterType::Month, "Month"},
             {FilterType::Monthday, "Monthday"},
-            {FilterType::Range, "Range"},
+            {FilterType::StaticRange, "Range"},
             {FilterType::List, "List"},
             {FilterType::Time, "Time"},
             {FilterType::Weekday, "Weekday"},
@@ -113,6 +113,7 @@ class Filter : public std::enable_shared_from_this<Filter> {
             {FilterType::Month, FilterOrder::Month},
             {FilterType::Monthday, FilterOrder::Monthday},
             {FilterType::Range, FilterOrder::Absolute},
+            {FilterType::StaticRange, FilterOrder::Absolute},
             {FilterType::List, FilterOrder::Absolute},
             {FilterType::Time, FilterOrder::TimeOfDay},
             {FilterType::Weekday, FilterOrder::Weekday},
@@ -139,6 +140,18 @@ class Filter : public std::enable_shared_from_this<Filter> {
 
     bool is_absolute() const {
         return absolute_range().has_value();
+    }
+
+    virtual bool is_discrete() const {
+        return false;
+    }
+
+    virtual Pointer discrete() const {
+        if (is_discrete()) {
+            return this->shared_from_this();
+        }
+        THROW(CannotMakeDiscreteError, tfm::format(
+              "This filter (%s) cannot be made discrete.", *this));
     }
 
     bool is_never() const {

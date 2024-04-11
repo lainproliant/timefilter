@@ -12,7 +12,10 @@
 
 #include <memory>
 #include <string>
-#include "timefilter/core.h"
+#include "timefilter/filter/core.h"
+#include "timefilter/filter/month.h"
+#include "timefilter/filter/monthday.h"
+#include "timefilter/filter/time.h"
 
 namespace timefilter {
 
@@ -38,6 +41,15 @@ class YearFilter : public Filter {
          }
 
          return range(pivot.zone());
+     }
+
+     filter_t discrete() const override {
+         return ListFilter::create({
+             this->shared_from_this(),
+             MonthFilter::create(Month::January),
+             MonthdayFilter::create(1),
+             TimeFilter::create(Time(0, 0))
+         });
      }
 
  protected:

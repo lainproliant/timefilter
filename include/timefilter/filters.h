@@ -7,6 +7,8 @@
  * Distributed under terms of the MIT license.
  */
 
+#include "timefilter/filter/date.h"
+#include "timefilter/filter/datetime.h"
 #include "timefilter/filter/duration.h"
 #include "timefilter/filter/list.h"
 #include "timefilter/filter/month.h"

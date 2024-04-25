@@ -53,11 +53,6 @@ class DurationFilter : public Filter {
              throw DurationFilterValidationError(
                  "Duration must be greater than zero.");
          }
-
-         if (! _base_filter->is_discrete()) {
-             throw DurationFilterValidationError(
-                 "Duration is ambiguous for non-discrete filters.");
-         }
      }
 
      filter_t _base_filter;

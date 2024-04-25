@@ -38,17 +38,19 @@ EXCEPTION_SUBTYPE(Error, CannotMakeDiscreteError);
 
 // --------------------------------------------------------
 enum class FilterType {
+    Custom,
+    Datetime,
+    Date,
+    Duration,
+    List,
     Month,
     Monthday,
     Range,
     StaticRange,
-    List,
     Time,
     Weekday,
     WeekdayOfMonth,
     Year,
-    Duration,
-    Custom
 };
 
 // --------------------------------------------------------
@@ -110,16 +112,19 @@ class Filter : public std::enable_shared_from_this<Filter> {
 
     virtual int order() const {
         static const std::map<FilterType, FilterOrder> orders = {
+            {FilterType::Custom, FilterOrder::Absolute},
+            {FilterType::Date, FilterOrder::Absolute},
+            {FilterType::Datetime, FilterOrder::Absolute},
+            {FilterType::Duration, FilterOrder::Last},
+            {FilterType::List, FilterOrder::Absolute},
             {FilterType::Month, FilterOrder::Month},
             {FilterType::Monthday, FilterOrder::Monthday},
             {FilterType::Range, FilterOrder::Absolute},
             {FilterType::StaticRange, FilterOrder::Absolute},
-            {FilterType::List, FilterOrder::Absolute},
             {FilterType::Time, FilterOrder::TimeOfDay},
             {FilterType::Weekday, FilterOrder::Weekday},
             {FilterType::WeekdayOfMonth, FilterOrder::Weekday},
             {FilterType::Year, FilterOrder::Year},
-            {FilterType::Duration, FilterOrder::Last},
         };
         assert(orders.find(type()) != orders.end());
         return static_cast<int>(orders.find(type())->second);

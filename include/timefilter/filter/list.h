@@ -135,6 +135,9 @@ class StackViewFilter : public Filter {
 // ------------------------------------------------------------------
 class ListFilter : public Filter {
  public:
+     typedef std::shared_ptr<const ListFilter> ConstPointer;
+     typedef std::shared_ptr<ListFilter> Pointer;
+
      ListFilter() : Filter(FilterType::List) { }
 
      static std::shared_ptr<ListFilter> create() {
@@ -172,6 +175,10 @@ class ListFilter : public Filter {
          }
          _stack = sort_and_validate(filters);
          return *this;
+     }
+
+     bool empty() const {
+         return _stack.empty();
      }
 
      filter_t discrete() const override {

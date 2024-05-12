@@ -8,9 +8,11 @@
 # Distributed under terms of the MIT license.
 # -------------------------------------------------------------------
 
+import ast
+import shlex
 from pathlib import Path
 
-from xeno.build import build, provide, task
+from xeno.build import build, provide, recipe, task
 from xeno.recipes import checkout, sh
 from xeno.recipes.cxx import ENV, compile
 
@@ -34,6 +36,8 @@ ENV.update(
         *INCLUDES,
         "-DMOONLIGHT_ENABLE_STACKTRACE",
         "-DMOONLIGHT_STACKTRACE_IN_DESCRIPTION",
+        "-x",
+        "c++",
         "--std=c++2a",
     ),
     LDFLAGS=("-g", "-ldl", "-lpthread"),
@@ -62,7 +66,7 @@ def lab_sources():
 # -------------------------------------------------------------------
 @provide
 def headers():
-    return Path.cwd().glob("include/timefilter/*.h")
+    return Path.cwd().glob("include/timefilter/**/*.h")
 
 
 # -------------------------------------------------------------------
@@ -94,6 +98,38 @@ def all(run_tests, labs):
 def cc_json():
     """Generate compile_commands.json for IDEs."""
     return sh("intercept-build ./build.py compile:\\* -R; ./build.py -c compile:\\*")
+
+
+# -------------------------------------------------------------------
+@task
+def ycm_extra_conf():
+    """Generates .ycm_extra_conf.py for the YouCompleteMe Vim plugin."""
+
+    YCM_FILE_TEMPLATE = """
+flags = [
+FLAGS
+]
+
+def FlagsForFile(filename):
+    return {
+        'flags': flags,
+        'do_cache': True
+    }
+""".strip()
+
+    @recipe
+    def mk_conf(target):
+        with open(target, "w") as outfile:
+            outfile.write(
+                YCM_FILE_TEMPLATE.replace(
+                    "FLAGS",
+                    "\n".join(f"    '{flag}'" for flag in shlex.split(ENV["CFLAGS"])),
+                )
+            )
+
+        return target
+
+    return mk_conf(".ycm_extra_conf.py")
 
 
 # -------------------------------------------------------------------

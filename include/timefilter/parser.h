@@ -10,26 +10,17 @@
 #ifndef __TIMEFILTER_PARSER_H
 #define __TIMEFILTER_PARSER_H
 
-#include <memory>
-#include <set>
 #include <vector>
-#include <map>
 #include <string>
-#include <deque>
-#include <algorithm>
 
-#include "moonlight/lex.h"
 #include "moonlight/date.h"
-#include "moonlight/linked_map.h"
-#include "moonlight/maps.h"
 #include "moonlight/string.h"
 #include "moonlight/json.h"
-#include "moonlight/automata.h"
 #include "timefilter/filters.h"
+#include "timefilter/tokens.h"
 
 namespace timefilter {
 
-namespace lex = moonlight::lex;
 namespace json = moonlight::json;
 using moonlight::str::to_lower;
 
@@ -133,86 +124,61 @@ class I18nStrings {
 };
 
 // ------------------------------------------------------------------
-enum TokenType {
-    DAY_MONTH_YEAR,
-    MONTH_DAY_YEAR,
-    MONTH_YEAR,
-    YEAR_MONTH,
-    DAY_MONTH,
-    MONTH_DAY,
-    WEEKDAY_MONTHDAY,
-    MONTH,
-    WEEKDAY,
-    ISO_DATE,
-    US_DATE,
-    MIL_TIME,
-    H12_TIME,
-    H24_TIME,
-    YEAR,
-    WEEKDAYS,
-    DURATION,
-    OP_RANGE_DASH,
-    OP_RANGE_PLUS
-};
+inline Grammar make_grammar(const I18nStrings& i18n) {
+    const std::string term = "(?:[^\\w\\d]|$)";
 
-using Grammar = lex::Grammar<TokenType>;
-
-// ------------------------------------------------------------------
-typedef std::function<Filter::Pointer(const I18nStrings&, const Grammar::Token&)> FilterFactory;
-
-// ------------------------------------------------------------------
-inline Grammar::Pointer make_grammar(const I18nStrings& i18n) {
-    auto root = Grammar::create();
-    const std::string term = "([^\\w\\d]|$)";
-
-    root
-    ->def(lex::ignore("\\s+"))
-    ->def(lex::match(tfm::format("([0-9]{1,2}) %s ([0-9]{4,})", i18n.long_month_rx())).icase(), DAY_MONTH_YEAR)
-    ->def(lex::match(tfm::format("([0-9]{1,2}) %s ([0-9]{4,})", i18n.short_month_rx())).icase(), DAY_MONTH_YEAR)
-    ->def(lex::match(tfm::format("%s ([0-9]{1,2}) ([0-9]{4,})", i18n.long_month_rx())).icase(), MONTH_DAY_YEAR)
-    ->def(lex::match(tfm::format("%s ([0-9]{1,2}) ([0-9]{4,})", i18n.short_month_rx())).icase(), MONTH_DAY_YEAR)
-    ->def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.long_month_rx())).icase(), MONTH_YEAR)
-    ->def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.short_month_rx())).icase(), MONTH_YEAR)
-    ->def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.long_month_rx())).icase(), YEAR_MONTH)
-    ->def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.short_month_rx())).icase(), YEAR_MONTH)
-    ->def(lex::match(tfm::format("([0-9]{1,2}) %s", i18n.long_month_rx())).icase(), DAY_MONTH)
-    ->def(lex::match(tfm::format("([0-9]{1,2}) %s", i18n.short_month_rx())).icase(), DAY_MONTH)
-    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.long_month_rx())).icase(), MONTH_DAY)
-    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.short_month_rx())).icase(), MONTH_DAY)
-    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.long_weekday_rx())).icase(), WEEKDAY_MONTHDAY)
-    ->def(lex::match(tfm::format("%s ([0-9]{1,2})", i18n.short_weekday_rx())).icase(), WEEKDAY_MONTHDAY)
-    ->def(lex::match(i18n.long_month_rx() + term).icase(), MONTH)
-    ->def(lex::match(i18n.short_month_rx() + term).icase(), MONTH)
-    ->def(lex::match(i18n.long_weekday_rx() + term).icase(), WEEKDAY)
-    ->def(lex::match(i18n.short_weekday_rx() + term).icase(), WEEKDAY)
-    ->def(lex::match("([0-9]{4,})-([0-9]{2})-([0-9]{2})"), ISO_DATE)
-    ->def(lex::match("([0-9]{1,2})/([0-9]{1,2})/([0-9]{4,})"), US_DATE)
-    ->def(lex::match("([0-9]{1,2})([0-9]{2})h"), MIL_TIME)
-    ->def(lex::match("([0-9]{1,2}):([0-9]{2})\\s?(am|pm|a|p)").icase(), H12_TIME)
-    ->def(lex::match("([0-9]{1,2}):([0-9]{2})"), H24_TIME)
-    ->def(lex::match("[0-9]{4,}" + term), YEAR)
-    ->def(lex::match("[MTWHFSU]{1,7}"), WEEKDAYS)
-    ->def(lex::match("([0-9]+)([wdhms])").icase(), DURATION)
-    ->def(lex::match("-"), OP_RANGE_DASH)
-    ->def(lex::match("+"), OP_RANGE_PLUS);
-
-    return root;
+    return Grammar()
+    .def(lex::ignore("\\s+"))
+    .def(lex::match(tfm::format("([0-9]{1,2})(?:\\w+)? %s ([0-9]{4,})", i18n.long_month_rx())).icase(), TokenType::DAY_MONTH_YEAR)
+    .def(lex::match(tfm::format("([0-9]{1,2})(?:\\w+)? %s ([0-9]{4,})", i18n.short_month_rx())).icase(), TokenType::DAY_MONTH_YEAR)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})(?:\\w+)? ([0-9]{4,})", i18n.long_month_rx())).icase(), TokenType::MONTH_DAY_YEAR)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})(?:\\w+)? ([0-9]{4,})", i18n.short_month_rx())).icase(), TokenType::MONTH_DAY_YEAR)
+    .def(lex::match(tfm::format("([0-9]{4,}) %s ([0-9]{1,2})(?:\\w+)?", i18n.long_month_rx())).icase(), TokenType::YEAR_MONTH_DAY)
+    .def(lex::match(tfm::format("([0-9]{4,}) %s ([0-9]{1,2})(?:\\w+)?", i18n.short_month_rx())).icase(), TokenType::YEAR_MONTH_DAY)
+    .def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.long_month_rx())).icase(), TokenType::MONTH_YEAR)
+    .def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.short_month_rx())).icase(), TokenType::MONTH_YEAR)
+    .def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.long_month_rx())).icase(), TokenType::YEAR_MONTH)
+    .def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.short_month_rx())).icase(), TokenType::YEAR_MONTH)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})(?:\\w+)?", i18n.long_month_rx())).icase(), TokenType::MONTH_DAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})(?:\\w+)?", i18n.short_month_rx())).icase(), TokenType::MONTH_DAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})(?:\\w+)?", i18n.long_weekday_rx())).icase(), TokenType::WEEKDAY_MONTHDAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})(?:\\w+)?", i18n.short_weekday_rx())).icase(), TokenType::WEEKDAY_MONTHDAY)
+    .def(lex::match(i18n.long_month_rx() + term).icase(), TokenType::MONTH)
+    .def(lex::match(i18n.short_month_rx() + term).icase(), TokenType::MONTH)
+    .def(lex::match(i18n.long_weekday_rx() + term).icase(), TokenType::WEEKDAY)
+    .def(lex::match(i18n.short_weekday_rx() + term).icase(), TokenType::WEEKDAY)
+    .def(lex::match("([0-9]{4,})-([0-9]{2})-([0-9]{2})"), TokenType::ISO_DATE)
+    .def(lex::match("([0-9]{1,2})/([0-9]{1,2})/([0-9]{4,})"), TokenType::US_DATE)
+    .def(lex::match("([0-9]{1,2})([0-9]{2})h"), TokenType::MIL_TIME)
+    .def(lex::match("([0-9]{1,2}):([0-9]{2})\\s?(am|pm|a|p)").icase(), TokenType::H12_TIME)
+    .def(lex::match("([0-9]{1,2}):([0-9]{2})"), TokenType::H24_TIME)
+    .def(lex::match("[0-9]{4,}" + term), TokenType::YEAR)
+    .def(lex::match("[MTWHFSU]{1,7}"), TokenType::WEEKDAYS)
+    .def(lex::match("([0-9]+)(hr)").icase(), TokenType::DURATION)
+    .def(lex::match("([0-9]+)(min)").icase(), TokenType::DURATION)
+    .def(lex::match("([0-9]+)(sec)").icase(), TokenType::DURATION)
+    .def(lex::match("([0-9]+)(ms)").icase(), TokenType::DURATION)
+    .def(lex::match("([0-9]+)([wdhms])").icase(), TokenType::DURATION)
+    .def(lex::match(tfm::format("([0-9]{1,2})(?:\\w+) %s", i18n.long_month_rx())).icase(), TokenType::DAY_MONTH)
+    .def(lex::match(tfm::format("([0-9]{1,2})(?:\\w+) %s", i18n.short_month_rx())).icase(), TokenType::DAY_MONTH)
+    .def(lex::match("-"), TokenType::OP_RANGE)
+    .def(lex::match("\\+"), TokenType::OP_DURATION)
+    .def(lex::match(","), TokenType::OP_JOIN);
 }
 
 // ------------------------------------------------------------------
 class Parser {
  public:
      explicit Parser(const I18nStrings& i18n = I18nStrings::defaults())
-     : _i18n(i18n), _lex(Grammar::Lexer()), _grammar(make_grammar(i18n)) { }
+     : _i18n(i18n), _grammar(make_grammar(i18n)) { }
 
      std::vector<Grammar::Token> parse(const std::string& expr) const {
-         return _lex.lex(_grammar, expr);
+         return _grammar.lexer().lex(expr);
      }
 
  private:
      const I18nStrings _i18n;
-     const Grammar::Lexer _lex;
-     const Grammar::Pointer _grammar;
+     const Grammar _grammar;
 };
 
 }  // namespace timefilter

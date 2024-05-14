@@ -28,7 +28,6 @@ using namespace moonlight::date;
 
 // --------------------------------------------------------
 EXCEPTION_TYPE(Error);
-EXCEPTION_SUBTYPE(Error, CannotMakeDiscreteError);
 
 // --------------------------------------------------------
 enum class FilterType {
@@ -183,11 +182,6 @@ class Filter : public std::enable_shared_from_this<Filter> {
 
     virtual Pointer simplify() const {
         return shared_from_this();
-    }
-
-    bool is_never() const {
-        Datetime dt;
-        return (!prev_range(dt).has_value() && !next_range(dt).has_value());
     }
 
  protected:

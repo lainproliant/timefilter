@@ -40,6 +40,10 @@ class YearFilter : public Filter {
          return range(pivot.zone());
      }
 
+     int year() const {
+         return _year;
+     }
+
  protected:
      std::string _repr() const override {
          return tfm::format("%d", _year);

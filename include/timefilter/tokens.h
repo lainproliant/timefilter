@@ -18,6 +18,7 @@ namespace lex = moonlight::lex;
 
 // ------------------------------------------------------------------
 enum class TokenType {
+    COMMENT,
     DAY_MONTH,
     DAY_MONTH_YEAR,
     DAY_OF_MONTH,
@@ -45,6 +46,7 @@ enum class TokenType {
 inline const std::string& token_type_name(TokenType type) {
     static const std::string _unknown = "UNKNOWN";
     static const std::map<TokenType, std::string> _names = {
+        {TokenType::COMMENT, "COMMENT"},
         {TokenType::DAY_MONTH, "DAY_MONTH"},
         {TokenType::DAY_OF_MONTH, "DAY_OF_MONTH"},
         {TokenType::DAY_MONTH_YEAR, "DAY_MONTH_YEAR"},

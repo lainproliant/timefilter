@@ -128,6 +128,7 @@ class I18nStrings {
 inline Grammar make_grammar(const I18nStrings& i18n) {
     const std::string term = "(?:[^\\w\\d]|$)";
     const std::string monthday_suffix = "(?:[a-z]+)";
+    const std::string negation_slug = "([~])?";
 
     return Grammar()
     .def(lex::ignore("\\s+"))
@@ -141,10 +142,10 @@ inline Grammar make_grammar(const I18nStrings& i18n) {
     .def(lex::match(tfm::format("%s ([0-9]{4,})", i18n.short_month_rx())).icase(), TokenType::MONTH_YEAR)
     .def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.long_month_rx())).icase(), TokenType::YEAR_MONTH)
     .def(lex::match(tfm::format("([0-9]{4,}) %s", i18n.short_month_rx())).icase(), TokenType::YEAR_MONTH)
-    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s", i18n.long_month_rx(), monthday_suffix)).icase(), TokenType::MONTH_DAY)
-    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s", i18n.short_month_rx(), monthday_suffix)).icase(), TokenType::MONTH_DAY)
-    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s", i18n.long_weekday_rx(), monthday_suffix)).icase(), TokenType::WEEKDAY_MONTHDAY)
-    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s", i18n.short_weekday_rx(), monthday_suffix)).icase(), TokenType::WEEKDAY_MONTHDAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s%s", i18n.long_month_rx(), monthday_suffix, negation_slug)).icase(), TokenType::MONTH_DAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s%s", i18n.short_month_rx(), monthday_suffix, negation_slug)).icase(), TokenType::MONTH_DAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s%s", i18n.long_weekday_rx(), monthday_suffix, negation_slug)).icase(), TokenType::WEEKDAY_MONTHDAY)
+    .def(lex::match(tfm::format("%s ([0-9]{1,2})%s%s", i18n.short_weekday_rx(), monthday_suffix, negation_slug)).icase(), TokenType::WEEKDAY_MONTHDAY)
     .def(lex::match(i18n.long_month_rx() + term).icase(), TokenType::MONTH)
     .def(lex::match(i18n.short_month_rx() + term).icase(), TokenType::MONTH)
     .def(lex::match(i18n.long_weekday_rx() + term).icase(), TokenType::WEEKDAY)
@@ -161,12 +162,13 @@ inline Grammar make_grammar(const I18nStrings& i18n) {
     .def(lex::match("([0-9]+)(sec)").icase(), TokenType::DURATION)
     .def(lex::match("([0-9]+)(ms)").icase(), TokenType::DURATION)
     .def(lex::match("([0-9]+)([wdhms])").icase(), TokenType::DURATION)
-    .def(lex::match(tfm::format("([0-9]{1,2})%s %s", monthday_suffix, i18n.long_month_rx())).icase(), TokenType::DAY_MONTH)
-    .def(lex::match(tfm::format("([0-9]{1,2})%s %s", monthday_suffix, i18n.short_month_rx())).icase(), TokenType::DAY_MONTH)
-    .def(lex::match(tfm::format("([0-9]{1,2})%s?", monthday_suffix)).icase(), TokenType::DAY_OF_MONTH)
+    .def(lex::match(tfm::format("([0-9]{1,2})%s%s %s", monthday_suffix, negation_slug, i18n.long_month_rx())).icase(), TokenType::DAY_MONTH)
+    .def(lex::match(tfm::format("([0-9]{1,2})%s%s %s", monthday_suffix, negation_slug, i18n.short_month_rx())).icase(), TokenType::DAY_MONTH)
+    .def(lex::match(tfm::format("([0-9]{1,2})%s?%s", monthday_suffix, negation_slug)).icase(), TokenType::DAY_OF_MONTH)
     .def(lex::match("-"), TokenType::OP_RANGE)
     .def(lex::match("[+]"), TokenType::OP_DURATION)
-    .def(lex::match(","), TokenType::OP_JOIN);
+    .def(lex::match(","), TokenType::OP_JOIN)
+    .def(lex::match("#(.*)$"), TokenType::COMMENT);
 }
 
 // ------------------------------------------------------------------

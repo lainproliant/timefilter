@@ -24,7 +24,9 @@ using moonlight::core::ValueError;
 
 class MonthdayFilter : public Filter {
  public:
-     explicit MonthdayFilter(const std::set<int>& days) : Filter(FilterType::Monthday), _days(days) { }
+     explicit MonthdayFilter(const std::set<int>& days) : Filter(FilterType::Monthday), _days(days) {
+         validate();
+     }
 
      template<class... TD>
      static std::shared_ptr<MonthdayFilter> create(int first, TD... params) {

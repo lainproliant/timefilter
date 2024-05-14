@@ -140,6 +140,10 @@ class Compiler {
                  ctx.pop_token();
                  break;
 
+             case TokenType::COMMENT:
+                 ctx.pop_token();
+                 break;
+
              default:
                  ctx.top_filter()->push(parse_filter_token(token));
                  ctx.pop_token();
@@ -207,14 +211,19 @@ class Compiler {
          Weekday weekday;
          std::set<Weekday> weekdays;
          std::string buffer;
+         int factor = 1;
 
          switch(tk.type()) {
          case TokenType::DAY_MONTH:
              day = std::stoi(tk.capture().group(1));
-             month = _i18n.month(tk.capture().group(2));
+             month = _i18n.month(tk.capture().group(3));
+
+             if (tk.capture().group(2).size() > 0) {
+                 factor = -1;
+             }
 
              return ListFilter::create({
-                 MonthdayFilter::create(day),
+                 MonthdayFilter::create(day * factor),
                  MonthFilter::create(month)
              });
 
@@ -227,7 +236,10 @@ class Compiler {
 
          case TokenType::DAY_OF_MONTH:
              day = std::stoi(tk.capture().group(1));
-             return MonthdayFilter::create(day);
+             if (tk.capture().group(2).size() > 0) {
+                 factor = -1;
+             }
+             return MonthdayFilter::create(day * factor);
 
          case TokenType::H12_TIME:
              hour = std::stoi(tk.capture().group(1));
@@ -267,9 +279,12 @@ class Compiler {
          case TokenType::MONTH_DAY:
              month = _i18n.month(tk.capture().group(1));
              day = std::stoi(tk.capture().group(2));
+             if (tk.capture().group(3).size() > 0) {
+                 factor = -1;
+             }
              return ListFilter::create({
                  MonthFilter::create(month),
-                 MonthdayFilter::create(day)
+                 MonthdayFilter::create(day * factor)
              });
 
          case TokenType::MONTH_DAY_YEAR:
@@ -310,10 +325,13 @@ class Compiler {
          case TokenType::WEEKDAY_MONTHDAY:
              weekday = _i18n.weekday(tk.capture().group(1));
              day = std::stoi(tk.capture().group(2));
+             if (tk.capture().group(3).size() > 0) {
+                 factor = -1;
+             }
 
              return ListFilter::create({
                  WeekdayFilter::create(weekday),
-                 MonthdayFilter::create(day)
+                 MonthdayFilter::create(day * factor)
              });
 
          case TokenType::YEAR:

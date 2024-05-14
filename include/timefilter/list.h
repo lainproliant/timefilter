@@ -21,6 +21,7 @@
 #include "timefilter/monthday.h"
 #include "timefilter/time.h"
 #include "timefilter/weekday.h"
+#include "timefilter/year.h"
 
 namespace timefilter {
 
@@ -216,7 +217,84 @@ class ListFilter : public Filter {
 
              }
          }
+
+         verify_reachable_list(sorted);
+
          return sorted;
+     }
+
+     static void verify_reachable_list(const std::vector<Filter::Pointer>& stack) {
+         std::set<int> years;
+         std::set<Month> months;
+         std::set<int> monthdays;
+
+         for (auto filter : stack) {
+             if (filter->type() == FilterType::Year) {
+                 auto year_filter = static_pointer_cast<const YearFilter>(filter);
+                 years.insert(year_filter->year());
+
+             } else if (filter->type() == FilterType::Month) {
+                 auto month_filter = static_pointer_cast<const MonthFilter>(filter);
+                 std::copy(month_filter->months().begin(), month_filter->months().end(),
+                           std::inserter(months, months.begin()));
+
+             } else if (filter->type() == FilterType::Monthday) {
+                 auto monthday_filter = static_pointer_cast<const MonthdayFilter>(filter);
+                 std::copy(monthday_filter->monthdays().begin(), monthday_filter->monthdays().end(),
+                           std::inserter(monthdays, monthdays.begin()));
+             }
+         }
+
+         /*
+          * The list is unreachable IFF ->
+          *     - The only monthdays provided never occur in the only months provided, OR
+          *     - IFF ->
+          *         - The only monthday provided is 29, AND
+          *         - The only month provided is February, AND
+          *         - The only years provided are NOT leap years
+          */
+         if (monthdays.empty()) {
+             return;
+         }
+
+         if (months.empty()) {
+             return;
+         }
+
+         bool monthday_normal_reachable = false;
+
+         for (auto monthday : monthdays) {
+             for (auto month : months) {
+                 if (last_day_of_month(2000 /* a leap year */, month) >= std::abs(monthday)) {
+                     monthday_normal_reachable = true;
+                     break;
+                 }
+             }
+             if (monthday_normal_reachable) break;
+         }
+
+         if (! monthday_normal_reachable) {
+             THROW(ListFilterValidationError, "None of the monthdays provided ever occur in the given months.");
+         }
+
+         if (years.empty()) {
+             return;
+         }
+
+         if (months.size() == 1 && months.contains(Month::February) &&
+             ((monthdays.size() == 1 && (monthdays.contains(29) ||
+                                         monthdays.contains(-29))) ||
+              (monthdays.size() == 2 && (monthdays.contains(29) &&
+                                         monthdays.contains(-29))))) {
+
+             for (auto year : years) {
+                 if (is_leap_year(year)) {
+                     return;
+                 }
+             }
+
+             THROW(ListFilterValidationError, "The only days provided are Feb 29 (+/-) and none of the years provided are leap years.");
+         }
      }
 
      static std::vector<Filter::Pointer> combine_filters(const std::vector<Filter::Pointer>& stack) {

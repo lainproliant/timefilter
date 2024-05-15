@@ -24,8 +24,9 @@ using moonlight::core::ValueError;
 
 class MonthdayFilter : public Filter {
  public:
-     explicit MonthdayFilter(const std::set<int>& days) : Filter(FilterType::Monthday), _days(days) {
-         validate();
+     explicit MonthdayFilter(const std::set<int>& days) : Filter(FilterType::Monthday) {
+         std::copy(days.begin(), days.end(), std::back_inserter(_days));
+         sort_and_validate();
      }
 
      template<class... TD>
@@ -47,18 +48,34 @@ class MonthdayFilter : public Filter {
      }
 
      std::optional<Range> next_range(const Datetime& pivot) const override {
-         Date date = pivot.date();
-         auto monthday = get_next_monthday(date);
-         return Range::for_days(monthday, 1);
+         Date month_pivot = pivot.date();
+
+         for (;;) {
+             auto dates = dates_for_month(month_pivot.year(), month_pivot.month());
+             for (auto iter = dates.begin(); iter != dates.end(); iter++) {
+                 if (*iter > pivot.date()) {
+                     return Range::for_days(*iter, 1);
+                 }
+             }
+             month_pivot = month_pivot.next_month();
+         }
      }
 
      std::optional<Range> prev_range(const Datetime& pivot) const override {
-         Date date = pivot.date();
-         auto monthday = get_prev_monthday(date);
-         return Range::for_days(monthday, 1);
+         Date month_pivot = pivot.date();
+
+         for (;;) {
+             auto dates = dates_for_month(month_pivot.year(), month_pivot.month());
+             for (auto iter = dates.rbegin(); iter != dates.rend(); iter++) {
+                 if (*iter <= pivot.date()) {
+                     return Range::for_days(*iter, 1);
+                 }
+             }
+             month_pivot = month_pivot.prev_month();
+         }
      }
 
-     const std::set<int>& monthdays() const {
+     const std::vector<int>& monthdays() const {
          return _days;
      }
 
@@ -70,70 +87,34 @@ class MonthdayFilter : public Filter {
      }
 
  private:
-     void validate() {
+     std::vector<Date> dates_for_month(const int year, const Month month) const {
+         std::vector<Date> dates;
+         const int last_day = last_day_of_month(year, month);
+
+         for (int day : _days) {
+             if (std::abs(day) <= last_day) {
+                 if (day < 0) {
+                     dates.push_back(Date(year, month, last_day + day + 1));
+                 } else {
+                     dates.push_back(Date(year, month, day));
+                 }
+             }
+         }
+
+         std::sort(dates.begin(), dates.end());
+         return dates;
+     }
+
+     void sort_and_validate() {
          for (int day : _days) {
              if (day == 0 || day < -31 || day > 31) {
                  throw ValueError("Offset x must be: '-31 <= x <= 31' and can't be 0 for offset in MonthdayFilter.");
              }
          }
+         std::sort(_days.begin(), _days.end());
      }
 
-     Date get_next_monthday(const Date& pivot) const {
-         Date date = pivot.advance_days(1);
-
-         for (;;) {
-             auto monthdays = get_days_for_month(date);
-             auto iter = std::find_if(monthdays.begin(), monthdays.end(), [&](const Date& monthday) {
-                 return monthday > date.recede_days(1);
-             });
-             if (iter != monthdays.end()) {
-                 return *iter;
-             }
-             date = date.next_month().start_of_month();
-         }
-     }
-
-     Date get_prev_monthday(const Date& pivot) const {
-         Date date = pivot;
-
-         for (;;) {
-             auto monthdays = get_days_for_month(date);
-             auto iter = std::find_if(monthdays.begin(), monthdays.end(), [&](const Date& monthday) {
-                 return monthday <= date;
-             });
-             if (iter != monthdays.end()) {
-                 return *iter;
-             }
-             date = date.prev_month().end_of_month();
-         }
-     }
-
-     std::vector<Date> get_days_for_month(const Date& pivot) const {
-         std::vector<Date> monthdays;
-         std::set<Date> dates;
-
-         for (int day : _days) {
-             if (day > 0) {
-                 auto date = pivot.start_of_month().advance_days(day - 1);
-                 if (date.month() == pivot.month() && dates.find(date) == dates.end()) {
-                     monthdays.push_back(date);
-                     dates.insert(date);
-                 }
-
-             } else {
-                 auto date = pivot.end_of_month().recede_days((day * -1) - 1);
-                 if (date.month() == pivot.month() && dates.find(date) == dates.end()) {
-                     monthdays.push_back(date);
-                     dates.insert(date);
-                 }
-             }
-         }
-
-         std::sort(monthdays.begin(), monthdays.end());
-         return monthdays;
-     }
-
-     std::set<int> _days;
+     std::vector<int> _days;
 };
 
 }  // namespace timefilter

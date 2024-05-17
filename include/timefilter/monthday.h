@@ -1,122 +1,108 @@
 /*
- * monthday_filter.h
+ * monthday.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Thursday December 17, 2020
- *
- * Distributed under terms of the MIT license.
+ * Date: Thursday May 16, 2024
  */
 
-#ifndef __TIMEFILTER_MONTHDAY_FILTER_H
-#define __TIMEFILTER_MONTHDAY_FILTER_H
+#ifndef __TIMEFILTER_MONTHDAY_H
+#define __TIMEFILTER_MONTHDAY_H
 
-#include <memory>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <set>
-#include "timefilter/core.h"
-#include "moonlight/variadic.h"
+#include "timefilter/filter.h"
 
 namespace timefilter {
 
-using moonlight::core::ValueError;
-
 class MonthdayFilter : public Filter {
  public:
-     explicit MonthdayFilter(const std::set<int>& days) : Filter(FilterType::Monthday) {
-         std::copy(days.begin(), days.end(), std::back_inserter(_days));
-         sort_and_validate();
+     MonthdayFilter(const int day) : Filter(FilterType::Monthday), _days({day}) {
+         validate();
      }
 
-     template<class... TD>
-     static std::shared_ptr<MonthdayFilter> create(int first, TD... params) {
-         std::set<int> days;
-         days.insert(first);
-         moonlight::variadic::pass{days.insert(params)...};
-         return create(days);
+     MonthdayFilter(const std::set<int>& days) : Filter(FilterType::Monthday), _days(days) {
+         validate();
      }
 
-     static std::shared_ptr<MonthdayFilter> create(int day) {
-         std::set<int> days;
-         days.insert(day);
-         return create(days);
+     template<class V>
+     static Pointer create(const V& param) {
+         return std::make_shared<MonthdayFilter>(param);
      }
 
-     static std::shared_ptr<MonthdayFilter> create(const std::set<int>& days) {
-         return std::make_shared<MonthdayFilter>(days);
-     }
-
-     std::optional<Range> next_range(const Datetime& pivot) const override {
-         Date month_pivot = pivot.date();
-
-         for (;;) {
-             auto dates = dates_for_month(month_pivot.year(), month_pivot.month());
-             for (auto iter = dates.begin(); iter != dates.end(); iter++) {
-                 if (*iter > pivot.date()) {
-                     return Range::for_days(*iter, 1);
+     std::optional<Range> next_range(const Datetime& dt) const override {
+         for (Date date = dt.date().start_of_month();
+              date.year() - dt.date().year() <= 8;
+              date = date.next_month()) {
+             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+             for (auto iter = ranges.begin(); iter != ranges.end(); iter++) {
+                 if (dt < iter->start()) {
+                     return *iter;
                  }
              }
-             month_pivot = month_pivot.next_month();
          }
+
+        THROW(Error, "Monthday filter could not find a next range.");
      }
 
-     std::optional<Range> prev_range(const Datetime& pivot) const override {
-         Date month_pivot = pivot.date();
-
-         for (;;) {
-             auto dates = dates_for_month(month_pivot.year(), month_pivot.month());
-             for (auto iter = dates.rbegin(); iter != dates.rend(); iter++) {
-                 if (*iter <= pivot.date()) {
-                     return Range::for_days(*iter, 1);
+     std::optional<Range> prev_range(const Datetime& dt) const override {
+         for (Date date = dt.date().start_of_month();
+              dt.date().year() - date.year() <= 8;
+              date = date.prev_month()) {
+             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+             for (auto iter = ranges.rbegin(); iter != ranges.rend(); iter++) {
+                 if (dt >= iter->start()) {
+                     return *iter;
                  }
              }
-             month_pivot = month_pivot.prev_month();
          }
+
+        THROW(Error, "Monthday filter could not find a prev range.");
      }
 
-     const std::vector<int>& monthdays() const {
+     const std::set<int>& days() const {
          return _days;
      }
 
  protected:
      std::string _repr() const override {
-         std::vector<int> monthdays(_days.begin(), _days.end());
+         std::vector<int> monthdays;
+         std::copy(_days.begin(), _days.end(), std::back_inserter(monthdays));
          std::sort(monthdays.begin(), monthdays.end());
-         return moonlight::str::join(monthdays, ", ");
+         return moonlight::str::join(monthdays, ",");
      }
 
  private:
-     std::vector<Date> dates_for_month(const int year, const Month month) const {
-         std::vector<Date> dates;
-         const int last_day = last_day_of_month(year, month);
-
-         for (int day : _days) {
-             if (std::abs(day) <= last_day) {
-                 if (day < 0) {
-                     dates.push_back(Date(year, month, last_day + day + 1));
-                 } else {
-                     dates.push_back(Date(year, month, day));
-                 }
-             }
-         }
-
-         std::sort(dates.begin(), dates.end());
-         return dates;
-     }
-
-     void sort_and_validate() {
+     void validate() {
          for (int day : _days) {
              if (day == 0 || day < -31 || day > 31) {
-                 throw ValueError("Offset x must be: '-31 <= x <= 31' and can't be 0 for offset in MonthdayFilter.");
+                 THROW(Error, "Offset x must be: '-31 <= x <= 31' and can't be 0 for offset in MonthdayFilter.");
              }
          }
-         std::sort(_days.begin(), _days.end());
      }
 
-     std::vector<int> _days;
+     std::vector<Range> monthday_ranges(const Zone& zone, int year, Month month) const {
+         std::vector<Range> ranges;
+         const int last_day = last_day_of_month(year, month);
+
+         for (auto day : _days) {
+             if (std::abs(day) <= last_day) {
+                 auto date = Date(year, month, day > 0 ? day : last_day + day + 1);
+
+                 ranges.push_back(Range(
+                         Datetime(zone, date),
+                         Datetime(zone, date.advance_days(1))));
+             }
+         }
+
+         std::sort(ranges.begin(), ranges.end(), [](const Range& rgA, const Range& rgB) {
+             return rgA.start() < rgB.start();
+         });
+
+         return ranges;
+     }
+
+     const std::set<int> _days;
 };
 
-}  // namespace timefilter
+}
 
-#endif /* !__TIMEFILTER_MONTHDAY_FILTER_H */
+
+#endif /* !__TIMEFILTER_MONTHDAY_H */

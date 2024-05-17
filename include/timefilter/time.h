@@ -1,57 +1,55 @@
 /*
- * time_filter.h
+ * time.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Friday December 25, 2020
- *
- * Distributed under terms of the MIT license.
+ * Date: Thursday May 16, 2024
  */
 
-#ifndef __TIMEFILTER_TIME_FILTER_H
-#define __TIMEFILTER_TIME_FILTER_H
+#ifndef __TIMEFILTER_TIME_H
+#define __TIMEFILTER_TIME_H
 
-#include <set>
-#include <memory>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include "timefilter/core.h"
-#include "moonlight/variadic.h"
+#include "timefilter/filter.h"
 
 namespace timefilter {
 
 class TimeFilter : public Filter {
  public:
-     explicit TimeFilter(const std::set<Time>& times) : Filter(FilterType::Time), _times(times) { }
+     TimeFilter(const Time& time) : Filter(FilterType::Time), _times({time}) { }
+     TimeFilter(const std::set<Time>& times) : Filter(FilterType::Time), _times(times) { }
 
-     template<class... TD>
-     static std::shared_ptr<TimeFilter> create(const Time& first, TD... params) {
-         std::set<Time> times;
-         times.insert(first);
-         moonlight::variadic::pass{times.insert(params)...};
-         return create(times);
+     template<class V>
+     static Pointer create(const V& param) {
+         return std::make_shared<TimeFilter>(param);
      }
 
-     static std::shared_ptr<TimeFilter> create(const Time& time) {
-         std::set<Time> times;
-         times.insert(time);
-         return create(times);
+     std::optional<Range> next_range(const Datetime& dt) const override {
+         for (Date date = dt.date();
+              Datetime(dt.zone(), date) - dt <= Duration::of_days(2);
+              date = date.advance_days(1)) {
+             auto ranges = time_ranges(dt.zone(), date);
+             for (auto iter = ranges.begin(); iter != ranges.end(); iter++) {
+                 if (dt < iter->start()) {
+                     return *iter;
+                 }
+             }
+         }
+
+         THROW(Error, "Time filter could not find a next range.");
      }
 
-     static std::shared_ptr<TimeFilter> create(const std::set<Time>& times) {
-         return std::make_shared<TimeFilter>(times);
-     }
+     std::optional<Range> prev_range(const Datetime& dt) const override {
+         for (Date date = dt.date();
+              dt - Datetime(dt.zone(), date) <= Duration::of_days(2);
+              date = date.recede_days(1)) {
+             auto ranges = time_ranges(dt.zone(), date);
+             for (auto iter = ranges.rbegin(); iter != ranges.rend(); iter++) {
+                 if (dt >= iter->start()) {
+                     return *iter;
+                 }
+             }
+         }
 
-     std::optional<Range> next_range(const Datetime& pivot) const override {
-         return range(get_next_daytime(pivot), pivot.zone());
-     }
-
-     std::optional<Range> prev_range(const Datetime& pivot) const override {
-         return range(get_prev_daytime(pivot), pivot.zone());
-     }
-
-     bool is_discrete() const override {
-         return true;
+         THROW(Error, "Time filter could not find a prev range.");
      }
 
      const std::set<Time>& times() const {
@@ -60,64 +58,39 @@ class TimeFilter : public Filter {
 
  protected:
      std::string _repr() const override {
-         std::vector<Time> times(_times.begin(), _times.end());
-         std::vector<std::string> reprs;
-         std::sort(times.begin(), times.end());
-         std::transform(times.begin(), times.end(), std::back_inserter(reprs), [](auto& t) {
+         std::vector<Time> times;
+         std::vector<std::string> iso_times;
+
+         std::copy(_times.begin(), _times.end(), std::back_inserter(times));
+         std::transform(times.begin(), times.end(), std::back_inserter(iso_times), [](const Time& t) {
              return t.isoformat();
          });
-         return moonlight::str::join(reprs, ", ");
+         return moonlight::str::join(iso_times, ",");
      }
 
  private:
-     std::vector<Datetime> get_times_for_day(const Date& pivot) const {
-         std::vector<Datetime> daytimes;
-         std::transform(_times.begin(), _times.end(), std::back_inserter(daytimes), [&](const Time& time) {
-             return Datetime(pivot, time);
-         });
-         std::sort(daytimes.begin(), daytimes.end());
-         return daytimes;
-     }
+     std::vector<Range> time_ranges(const Zone& zone, const Date& date) const {
+         std::vector<Range> ranges;
 
-     Datetime get_next_daytime(const Datetime& pivot) const {
-         Datetime date = pivot + minutes(1);
-
-         for (;;) {
-             auto daytimes = get_times_for_day(date.date());
-             auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
-                 return dt > (date - minutes(1));
-             });
-             if (iter != daytimes.end()) {
-                 return *iter;
-             }
-             date = Datetime(pivot.zone(), date.date().advance_days(1));
+         for (auto time : sorted_times()) {
+             auto dt = Datetime(zone, date, time);
+             ranges.push_back(Range(dt, dt + Duration::of_minutes(1)));
          }
+
+         return ranges;
      }
 
-     Datetime get_prev_daytime(const Datetime& pivot) const {
-         Datetime date = pivot;
-
-         for (;;) {
-             auto daytimes = get_times_for_day(date.date());
-             auto iter = std::find_if(daytimes.begin(), daytimes.end(), [&](const Datetime& dt) {
-                 return dt <= date;
-             });
-             if (iter != daytimes.end()) {
-                 return *iter;
-             }
-             date = Datetime(pivot.zone(), date.date().recede_days(1), Time::end_of_day());
-         }
+     std::vector<Time> sorted_times() const {
+         std::vector<Time> times;
+         std::copy(_times.begin(), _times.end(), std::back_inserter(times));
+         std::sort(times.begin(), times.end());
+         return times;
      }
 
-     Range range(const Datetime& dt, const Zone& zone) const {
-         return Range(
-             dt,
-             dt + minutes(1)).zone(zone);
-     }
-
-     std::set<Time> _times;
+     const std::set<Time> _times;
 };
 
-}  // namespace timefilter
+}
 
-#endif /* !__TIMEFILTER_TIME_FILTER_H */
+
+#endif /* !__TIMEFILTER_TIME_H */

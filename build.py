@@ -34,6 +34,7 @@ ENV.update(
         "-Wall",
         "-fpermissive",  # needed for g++ to respect "always_false<T>"
         *INCLUDES,
+        "-DMOONLIGHT_DATETIME_DEBUG",
         "-DMOONLIGHT_ENABLE_STACKTRACE",
         "-DMOONLIGHT_STACKTRACE_IN_DESCRIPTION",
         "-x",

@@ -1,92 +1,99 @@
 /*
- * month_filter.h
+ * month.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Thursday December 17, 2020
- *
- * Distributed under terms of the MIT license.
+ * Date: Thursday May 16, 2024
  */
 
-#ifndef __TIMEFILTER_MONTH_FILTER_H
-#define __TIMEFILTER_MONTH_FILTER_H
+#ifndef __TIMEFILTER_MONTH_H
+#define __TIMEFILTER_MONTH_H
 
-#include <memory>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <set>
-#include "timefilter/core.h"
-#include "moonlight/variadic.h"
+#include "timefilter/filter.h"
 
 namespace timefilter {
 
-// ------------------------------------------------------------------
 class MonthFilter : public Filter {
  public:
-     explicit MonthFilter(const std::set<Month>& months) : Filter(FilterType::Month), _months(months) { }
+     MonthFilter(Month month) : Filter(FilterType::Month), _months({month}) { }
+     MonthFilter(const std::set<Month>& months) : Filter(FilterType::Month), _months(months) { }
 
-     template<class... TD>
-     static std::shared_ptr<MonthFilter> create(Month first, TD... params) {
-         std::set<Month> months;
-         months.insert(first);
-         moonlight::variadic::pass{months.insert(params)...}; return create(months);
+     static Pointer create(Month month) {
+         return std::make_shared<MonthFilter>(month);
      }
 
-     static std::shared_ptr<MonthFilter> create(Month month) {
-         std::set<Month> months;
-         months.insert(month);
-         return create(months);
-     }
-
-     static std::shared_ptr<MonthFilter> create(const std::set<Month>& months) {
+     static Pointer create(const std::set<Month>& months) {
          return std::make_shared<MonthFilter>(months);
      }
 
-     std::optional<Range> next_range(const Datetime& pivot) const override {
-         Date date;
+     std::optional<Range> next_range(const Datetime& dt) const override {
+         for (int year = dt.date().year(); year - dt.date().year() <= 1; year ++) {
+             auto ranges = month_ranges(dt.zone(), year);
+             for (auto iter = ranges.begin(); iter != ranges.end(); iter++) {
+                 if (dt < iter->start()) {
+                     return *iter;
+                 }
+             }
+         }
 
-         for (date = pivot.date().with_day(1).next_month();
-              _months.find(date.month()) == _months.end();
-              date = date.next_month()) { }
-
-         return range(date, pivot.zone());
+         THROW(Error, "Month filter could not find a next range.");
      }
 
-     std::optional<Range> prev_range(const Datetime& pivot) const override {
-         Date date;
+     std::optional<Range> prev_range(const Datetime& dt) const override {
+         for (int year = dt.date().year(); dt.date().year() - year <= 1; year --) {
+             auto ranges = month_ranges(dt.zone(), year);
+             for (auto iter = ranges.rbegin(); iter != ranges.rend(); iter++) {
+                 if (dt >= iter->start()) {
+                     return *iter;
+                 }
+             }
+         }
 
-         for (date = pivot.date().with_day(1);
-              _months.find(date.month()) == _months.end();
-              date = date.prev_month()) { }
-
-         return range(date, pivot.zone());
+         THROW(Error, "Month filter could not find a prev range.");
      }
 
      const std::set<Month>& months() const {
          return _months;
      }
 
-
  protected:
      std::string _repr() const override {
-         std::vector<int> nmonths;
-         std::transform(_months.begin(), _months.end(), std::back_inserter(nmonths), [](auto m) {
-             return static_cast<int>(m);
+         std::vector<int> months;
+         std::transform(_months.begin(), _months.end(), std::back_inserter(months), [](Month month) {
+             return static_cast<std::underlying_type_t<Month>>(month);
          });
-         std::sort(nmonths.begin(), nmonths.end());
-         return moonlight::str::join(nmonths, ", ");
+         std::sort(months.begin(), months.end());
+         return moonlight::str::join(months, ",");
      }
+
 
  private:
-     Range range(const Date& month_start, const Zone& zone) const {
-         return Range(
-             Datetime(month_start),
-             Datetime(month_start.next_month())).zone(zone);
+     std::vector<Range> month_ranges(const Zone& zone, int year) const {
+         std::vector<Range> ranges;
+         std::vector<Month> months = sorted_months();
+
+         std::transform(months.begin(), months.end(),
+                        std::back_inserter(ranges),
+                        [=](Month month) {
+                            const Date date = Date(year, month);
+                            const Datetime start_dt = Datetime(zone, date);
+                            const Datetime end_dt = Datetime(zone, date.next_month());
+                            return Range(start_dt, end_dt);
+                        });
+
+         return ranges;
      }
 
-     std::set<Month> _months;
+     std::vector<Month> sorted_months() const {
+         std::vector<Month> months;
+         std::copy(_months.begin(), _months.end(), std::back_inserter(months));
+         std::sort(months.begin(), months.end());
+         return months;
+     }
+
+     const std::set<Month> _months;
 };
 
-}  // namespace timefilter
+}
 
-#endif /* !__TIMEFILTER_MONTH_FILTER_H */
+
+#endif /* !__TIMEFILTER_MONTH_H */

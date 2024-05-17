@@ -1,106 +1,116 @@
 /*
- * weekday_of_month_filter.h
+ * weekday_of_month.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Thursday December 17, 2020
- *
- * Distributed under terms of the MIT license.
+ * Date: Thursday May 16, 2024
  */
 
-#ifndef __TIMEFILTER_WEEKDAY_OF_MONTH_FILTER_H
-#define __TIMEFILTER_WEEKDAY_OF_MONTH_FILTER_H
+#ifndef __TIMEFILTER_WEEKDAY_OF_MONTH_H
+#define __TIMEFILTER_WEEKDAY_OF_MONTH_H
 
-#include <memory>
-#include <string>
-#include "timefilter/core.h"
+#include "timefilter/filter.h"
 
 namespace timefilter {
 
-using moonlight::core::ValueError;
-
 class WeekdayOfMonthFilter : public Filter {
  public:
-     explicit WeekdayOfMonthFilter(Weekday weekday, int offset)
-     : Filter(FilterType::WeekdayOfMonth), _weekday(weekday), _offset(offset) {
+     WeekdayOfMonthFilter(Weekday weekday, int offset) : Filter(FilterType::WeekdayOfMonth), _weekday(weekday), _offset(offset) {
          validate();
      }
 
-     static std::shared_ptr<WeekdayOfMonthFilter> create(Weekday weekday, int offset) {
+     static Pointer create(Weekday weekday, int offset) {
          return std::make_shared<WeekdayOfMonthFilter>(weekday, offset);
      }
 
-     std::optional<Range> next_range(const Datetime& pivot) const override {
-         Date date = pivot.date();
-         std::optional<Date> month_weekday;
+     std::optional<Range> next_range(const Datetime& dt) const override {
+         for (Date year_month = dt.date().start_of_month();
+              Datetime(dt.zone(), year_month) - dt <= Duration::of_days(500);
+              year_month = year_month.next_month()) {
+             std::optional<Range> range = monthday_range(dt.zone(), year_month.year(), year_month.month());
+             if (range.has_value() && dt < range->start()) {
+                 return range;
+             }
+         }
 
-         for (month_weekday = find(date);
-              !month_weekday.has_value() || month_weekday <= pivot.date();
-              date = date.next_month(), month_weekday = find(date)) { }
-
-         return Range::for_days(month_weekday.value(), 1);
+        THROW(Error, "WeekdayOfMonth filter could not find a next range.");
      }
 
-     std::optional<Range> prev_range(const Datetime& pivot) const override {
-         Date date = pivot.date();
-         std::optional<Date> month_weekday;
+     std::optional<Range> prev_range(const Datetime& dt) const override {
+         for (Date year_month = dt.date().start_of_month();
+              dt - Datetime(dt.zone(), year_month) <= Duration::of_days(500);
+              year_month = year_month.prev_month()) {
+             std::optional<Range> range = monthday_range(dt.zone(), year_month.year(), year_month.month());
+             if (range.has_value() && dt >= range->start()) {
+                 return range;
+             }
+         }
 
-         for (month_weekday = find(date);
-              !month_weekday.has_value() || month_weekday > pivot.date();
-              date = date.prev_month(), month_weekday = find(date)) { }
+        THROW(Error, "WeekdayOfMonth filter could not find a prev range.");
+     }
 
-         return Range::for_days(month_weekday.value(), 1);
+     Weekday weekday() const {
+         return _weekday;
+     }
+
+     int offset() const {
+         return _offset;
      }
 
  protected:
      std::string _repr() const override {
-         return tfm::format("%d:%d", _offset, static_cast<int>(_weekday));
+         static const std::vector<std::string> weekday_names = {
+             "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+         };
+         std::ostringstream sb;
+         int weekday_id = static_cast<std::underlying_type_t<Weekday>>(_weekday);
+         sb << weekday_names[weekday_id] << "/" << _offset;
+         return sb.str();
      }
 
  private:
      void validate() const {
          if (_offset < -5 || _offset > 5 || _offset == 0) {
-             throw ValueError("Offset x must be: '-5 <= x <= 5' and can't be 00 for offset in WeekdayOfMonthFilter.");
+             THROW(Error, "Offset must be: '-5 <= x <= 5' and can't be 0 for offset in WeekdayOfMonth.");
          }
      }
 
-     std::optional<Date> find(const Date& pivot) const {
-         if (_offset > 0) {
-             Date date = pivot.start_of_month().recede_days(1);
+     std::optional<Range> monthday_range(const Zone& zone, int year, Month month) const {
+         const Date month_start = Date(year, month);
+         const Date month_end = month_start.end_of_month();
+         Date date;
 
-             for (int x = 0; x < _offset;) {
-                 date++;
+         if (_offset > 0) {
+             date = month_start;
+             for (int x = 0; x < _offset; date = date.advance_days(1)) {
                  if (date.weekday() == _weekday) {
                      x++;
                  }
              }
-
-             if (date.month() != pivot.month()) {
-                 return {};
-             }
-             return date;
 
          } else {
-             int offset = -1 * _offset;
-             Date date = pivot.end_of_month().advance_days(1);
-
-             for (int x = 0; x < offset;) {
-                 date--;
+             date = month_end;
+             for (int x = 0; x > _offset; date = date.recede_days(1)) {
                  if (date.weekday() == _weekday) {
-                     x++;
+                     x--;
                  }
              }
-
-             if (date.month() != pivot.month()) {
-                 return {};
-             }
-             return date;
          }
+
+         if (date.year() == month_start.year() &&
+             date.month() == month_start.month()) {
+             return Range(
+                 Datetime(zone, date),
+                 Datetime(zone, date.advance_days(1))
+             );
+         }
+
+         return {};
      }
 
-     Weekday _weekday;
-     int _offset;
+     const Weekday _weekday;
+     const int _offset;
 };
 
-}  // namespace timefilter
+}
 
-#endif /* !__TIMEFILTER_WEEKDAY_OF_MONTH_FILTER_H */
+#endif /* !__TIMEFILTER_WEEKDAY_OF_MONTH_H */

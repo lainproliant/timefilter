@@ -2,37 +2,42 @@
  * date.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Thursday April 11, 2024
+ * Date: Thursday May 16, 2024
  */
 
-#ifndef __TIMEFILTER_DATE_FILTER_H
-#define __TIMEFILTER_DATE_FILTER_H
+#ifndef __TIMEFILTER_DATE_H
+#define __TIMEFILTER_DATE_H
 
-#include "timefilter/core.h"
+#include "timefilter/filter.h"
 
 namespace timefilter {
 
 class DateFilter : public Filter {
  public:
-     explicit DateFilter(const Date& dt)
-     : Filter(FilterType::Date), _date(dt) { }
+     DateFilter(const Date& date) : Filter(FilterType::Date), _date(date) { }
 
-     static std::shared_ptr<DateFilter> create(const Date& dt) {
-         return std::make_shared<DateFilter>(dt);
+     static Pointer create(const Date& date) {
+         return std::make_shared<DateFilter>(date);
      }
 
-     std::optional<Range> next_range(const Datetime& pivot) const override {
-         if (pivot < _range().start()) {
-             return _range();
+     std::optional<Range> next_range(const Datetime& dt) const override {
+         auto rg = range(dt.zone());
+         if (dt < rg.start()) {
+             return rg;
          }
          return {};
      }
 
-     std::optional<Range> prev_range(const Datetime& pivot) const override {
-         if (pivot > _range().start()) {
-             return _range();
+     std::optional<Range> prev_range(const Datetime& dt) const override {
+         auto rg = range(dt.zone());
+         if (dt >= rg.start()) {
+             return rg;
          }
          return {};
+     }
+
+     const Date& date() const {
+         return _date;
      }
 
  protected:
@@ -41,14 +46,17 @@ class DateFilter : public Filter {
      }
 
  private:
-     Range _range() const {
-         auto dt_start = Datetime(_date, Time::start_of_day());
-         auto dt_end = Datetime(_date.advance_days(1), Time::start_of_day());
-         return Range(dt_start, dt_end);
+     Range range(const Zone& zone) const {
+         return Range(
+             Datetime(zone, _date),
+             Datetime(zone, _date.advance_days(1))
+         );
      }
+
      const Date _date;
+
 };
 
 }
 
-#endif /* !__TIMEFILTER_DATE_FILTER_H */
+#endif /* !__TIMEFILTER_DATE_H */

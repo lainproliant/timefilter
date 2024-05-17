@@ -1,43 +1,43 @@
 /*
- * year_filter.h
+ * year.h
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
- * Date: Wednesday December 16, 2020
- *
- * Distributed under terms of the MIT license.
+ * Date: Thursday May 16, 2024
  */
 
-#ifndef __TIMEFILTER_YEAR_FILTER_H
-#define __TIMEFILTER_YEAR_FILTER_H
+#ifndef __TIMEFILTER_YEAR_H
+#define __TIMEFILTER_YEAR_H
 
-#include <memory>
-#include <string>
-#include "timefilter/core.h"
+#include "timefilter/filter.h"
 
 namespace timefilter {
 
 class YearFilter : public Filter {
  public:
-     explicit YearFilter(int year) : Filter(FilterType::Year), _year(year) { }
+     YearFilter(int year) : Filter(FilterType::Year), _year(year) { }
 
-     static std::shared_ptr<YearFilter> create(int year) {
+     static Pointer create(int year) {
          return std::make_shared<YearFilter>(year);
      }
 
-     std::optional<Range> next_range(const Datetime& pivot) const override {
-         if (pivot >= Datetime(pivot.zone(), _year, Month::January, 1)) {
-             return {};
+     std::optional<Range> next_range(const Datetime& dt) const override {
+         auto range = year_range(dt.zone());
+
+         if (dt < range.start()) {
+             return range;
          }
 
-         return range(pivot.zone());
+         return {};
      }
 
-     std::optional<Range> prev_range(const Datetime& pivot) const override {
-         if (pivot.date().year() < _year) {
-             return {};
+     std::optional<Range> prev_range(const Datetime& dt) const override {
+         auto range = year_range(dt.zone());
+
+         if (dt >= range.start()) {
+             return range;
          }
 
-         return range(pivot.zone());
+         return {};
      }
 
      int year() const {
@@ -46,20 +46,24 @@ class YearFilter : public Filter {
 
  protected:
      std::string _repr() const override {
-         return tfm::format("%d", _year);
+         std::ostringstream sb;
+         sb << _year;
+         return sb.str();
      }
 
  private:
-     Range range(const Zone& zone) const {
+     Range year_range(const Zone& zone) const {
+         const Date this_year = Date(_year, Month::January);
+         const Date next_year = Date(_year + 1, Month::January);
          return Range(
-             Datetime(_year, Month::January, 1),
-             Datetime(_year + 1, Month::January, 1)).zone(zone);
+             Datetime(zone, this_year),
+             Datetime(zone, next_year)
+         );
      }
 
-     int _year;
+     const int _year;
 };
 
+}
 
-}  // namespace timefilter
-
-#endif /* !__TIMEFILTER_YEAR_FILTER_H */
+#endif /* !__TIMEFILTER_YEAR_H */

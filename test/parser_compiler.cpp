@@ -27,54 +27,63 @@ int main() {
     return TestSuite("timefilter parser tests")
     .test("dmy_long", [&]() {
         auto filter = compile("8 June 1988");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(1988, Month::June, 8));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(1988, Month::June, 9));
     })
     .test("dmy_short", [&]() {
         auto filter = compile("8 Jun 1988");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(1988, Month::June, 8));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(1988, Month::June, 9));
     })
     .test("mdy_long", [&]() {
         auto filter = compile("June 8 1988");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(1988, Month::June, 8));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(1988, Month::June, 9));
     })
     .test("mdy_short", [&]() {
         auto filter = compile("Jun 8 1988");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(1988, Month::June, 8));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(1988, Month::June, 9));
     })
     .test("my_long", [&]() {
         auto filter = compile("September 2021");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(2021, Month::September, 1));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(2021, Month::October, 1));
     })
     .test("my_short", [&]() {
         auto filter = compile("Sep 2021");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(2021, Month::September, 1));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(2021, Month::October, 1));
     })
     .test("ym_long", [&]() {
         auto filter = compile("2021 September");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(2021, Month::September, 1));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(2021, Month::October, 1));
     })
     .test("ym_short", [&]() {
         auto filter = compile("2021 Sep");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         ASSERT_EQUAL(filter->absolute_range()->start(), Datetime(2021, Month::September, 1));
         ASSERT_EQUAL(filter->absolute_range()->end(), Datetime(2021, Month::October, 1));
     })
     .test("dm_long", [&]() {
         auto filter = compile("10 November");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -86,6 +95,7 @@ int main() {
     })
     .test("dm_short", [&]() {
         auto filter = compile("10 Nov");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -97,6 +107,7 @@ int main() {
     })
     .test("md_long", [&]() {
         auto filter = compile("November 10");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -108,6 +119,7 @@ int main() {
     })
     .test("md_short", [&]() {
         auto filter = compile("Nov 10");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -119,6 +131,7 @@ int main() {
     })
     .test("weekday_monthday_long", [&]() {
         auto filter = compile("Friday 13");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -130,6 +143,7 @@ int main() {
     })
     .test("weekday_monthday_short", [&]() {
         auto filter = compile("Fri 13");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -141,6 +155,7 @@ int main() {
     })
     .test("month_long", [&]() {
         auto filter = compile("October");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -152,6 +167,7 @@ int main() {
     })
     .test("month_short", [&]() {
         auto filter = compile("Oct");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -163,6 +179,7 @@ int main() {
     })
     .test("iso_date", [&]() {
         auto filter = compile("2021-06-03");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         auto range = filter->absolute_range();
         ASSERT_EQUAL(range->start(), Datetime(2021, Month::June, 3));
@@ -170,6 +187,7 @@ int main() {
     })
     .test("us_date", [&]() {
         auto filter = compile("6/3/2021");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_TRUE(filter->is_absolute());
         auto range = filter->absolute_range();
         ASSERT_EQUAL(range->start(), Datetime(2021, Month::June, 3));
@@ -177,6 +195,7 @@ int main() {
     })
     .test("mil_time", [&]() {
         auto filter = compile("2315h");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -188,6 +207,7 @@ int main() {
     })
     .test("h12_time am", [&]() {
         auto filter = compile("11:15 am");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -199,6 +219,7 @@ int main() {
     })
     .test("h12_time pm", [&]() {
         auto filter = compile("11:15 pm");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -210,6 +231,7 @@ int main() {
     })
     .test("h24_time", [&]() {
         auto filter = compile("13:15");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2021, Month::January, 1);
         auto next_range = filter->next_range(pivot);
@@ -221,6 +243,7 @@ int main() {
     })
     .test("weekdays_repeating", [&]() {
         auto filter = compile("TH 6:30pm");
+        tfm::printfln("filter = %s", *filter);
         ASSERT_FALSE(filter->is_absolute());
         auto pivot = Datetime(2024, Month::February, 12);
         auto next_range = filter->next_range(pivot);

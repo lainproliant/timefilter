@@ -1,5 +1,5 @@
 /*
- * list_filter.cpp
+ * filter_set.cpp
  *
  * Author: Lain Musgrove (lain.proliant@gmail.com)
  * Date: Wednesday January 6, 2021
@@ -13,7 +13,7 @@
 #include "timefilter/weekday.h"
 #include "timefilter/time.h"
 #include "timefilter/weekday_of_month.h"
-#include "timefilter/list.h"
+#include "timefilter/set.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -36,32 +36,31 @@ int main() {
         std::cout << "dtE = " << dtE << std::endl;
         std::cout << "dtF = " << dtF << std::endl;
 
-        auto filterA = ListFilter()
-            .push(MonthFilter::create(Month::December))
-            .push(WeekdayFilter::create(Weekday::Monday, Weekday::Wednesday, Weekday::Friday))
-            .push(TimeFilter::create(Time(12, 15)));
+        auto filterA = FilterSet::create()
+            ->add(MonthFilter::create(Month::December))
+            ->add(WeekdayFilter::create(std::set{Weekday::Monday, Weekday::Wednesday, Weekday::Friday}))
+            ->add(TimeFilter::create(Time(12, 15)));
 
         std::cout << "filterA = " << filterA << std::endl;
 
-        auto filterB = ListFilter()
-            .push(MonthFilter::create(Month::January, Month::June))
-            .push(WeekdayOfMonthFilter::create(Weekday::Sunday, -1))
-            .push(TimeFilter::create(Time(10, 30)));
+        auto filterB = FilterSet::create()
+            ->add(MonthFilter::create(std::set{Month::January, Month::June}))
+            ->add(WeekdayOfMonthFilter::create(Weekday::Sunday, -1));
 
         std::cout << "filterB = " << filterB << std::endl;
 
-        auto rangeAA = filterA.next_range(dtA);
-        auto rangeAB = filterA.next_range(dtB);
-        auto rangeAC = filterA.next_range(dtC);
-        auto rangeAD = filterA.next_range(dtD);
-        auto rangeAE = filterA.next_range(dtE);
-        auto rangeAF = filterA.next_range(dtF);
-        auto rangeBA = filterB.next_range(dtA);
-        auto rangeBB = filterB.next_range(dtB);
-        auto rangeBC = filterB.next_range(dtC);
-        auto rangeBD = filterB.next_range(dtD);
-        auto rangeBE = filterB.next_range(dtE);
-        auto rangeBF = filterB.next_range(dtF);
+        auto rangeAA = filterA->next_range(dtA);
+        auto rangeAB = filterA->next_range(dtB);
+        auto rangeAC = filterA->next_range(dtC);
+        auto rangeAD = filterA->next_range(dtD);
+        auto rangeAE = filterA->next_range(dtE);
+        auto rangeAF = filterA->next_range(dtF);
+        auto rangeBA = filterB->next_range(dtA);
+        auto rangeBB = filterB->next_range(dtB);
+        auto rangeBC = filterB->next_range(dtC);
+        auto rangeBD = filterB->next_range(dtD);
+        auto rangeBE = filterB->next_range(dtE);
+        auto rangeBF = filterB->next_range(dtF);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
         ASSERT_TRUE(rangeAA.has_value());
@@ -150,28 +149,30 @@ int main() {
         std::cout << "dtE = " << dtE << std::endl;
         std::cout << "dtF = " << dtF << std::endl;
 
-        auto filterA = ListFilter()
-            .push(MonthFilter::create(Month::December))
-            .push(WeekdayFilter::create(Weekday::Monday, Weekday::Wednesday, Weekday::Friday))
-            .push(TimeFilter::create(Time(12, 15)));
+        auto filterA = FilterSet::create()
+            ->add(MonthFilter::create(Month::December))
+            ->add(WeekdayFilter::create(std::set{Weekday::Monday, Weekday::Wednesday, Weekday::Friday}))
+            ->add(TimeFilter::create(Time(12, 15)));
 
-        auto filterB = ListFilter()
-            .push(MonthFilter::create(Month::January, Month::June))
-            .push(WeekdayOfMonthFilter::create(Weekday::Sunday, -1))
-            .push(TimeFilter::create(Time(10, 30)));
+        std::cout << "filterA = " << filterA << std::endl;
 
-        auto rangeAA = filterA.prev_range(dtA);
-        auto rangeAB = filterA.prev_range(dtB);
-        auto rangeAC = filterA.prev_range(dtC);
-        auto rangeAD = filterA.prev_range(dtD);
-        auto rangeAE = filterA.prev_range(dtE);
-        auto rangeAF = filterA.prev_range(dtF);
-        auto rangeBA = filterB.prev_range(dtA);
-        auto rangeBB = filterB.prev_range(dtB);
-        auto rangeBC = filterB.prev_range(dtC);
-        auto rangeBD = filterB.prev_range(dtD);
-        auto rangeBE = filterB.prev_range(dtE);
-        auto rangeBF = filterB.prev_range(dtF);
+        auto filterB = FilterSet::create()
+            ->add(MonthFilter::create(std::set{Month::January, Month::June}))
+            ->add(WeekdayOfMonthFilter::create(Weekday::Sunday, -1));
+
+
+        auto rangeAA = filterA->prev_range(dtA);
+        auto rangeAB = filterA->prev_range(dtB);
+        auto rangeAC = filterA->prev_range(dtC);
+        auto rangeAD = filterA->prev_range(dtD);
+        auto rangeAE = filterA->prev_range(dtE);
+        auto rangeAF = filterA->prev_range(dtF);
+        auto rangeBA = filterB->prev_range(dtA);
+        auto rangeBB = filterB->prev_range(dtB);
+        auto rangeBC = filterB->prev_range(dtC);
+        auto rangeBD = filterB->prev_range(dtD);
+        auto rangeBE = filterB->prev_range(dtE);
+        auto rangeBF = filterB->prev_range(dtF);
 
         std::cout << "rangeAA.has_value() = " << rangeAA.has_value() << std::endl;
         ASSERT_TRUE(rangeAA.has_value());

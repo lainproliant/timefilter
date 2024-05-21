@@ -108,7 +108,7 @@ int main() {
     })
     .test("next_range() for multiple weekdays", [&]() {
         Datetime dt (2021, Month::January, 1);
-        auto filter = WeekdayFilter::create(Weekday::Monday, Weekday::Tuesday, Weekday::Friday);
+        auto filter = WeekdayFilter::create(std::set{Weekday::Monday, Weekday::Tuesday, Weekday::Friday});
 
         std::cout << "dt = " << dt << std::endl;
 
@@ -146,7 +146,7 @@ int main() {
     })
     .test("prev_range() for multiple weekdays", [&]() {
         Datetime dt (2021, Month::January, 1);
-        auto filter = WeekdayFilter::create(Weekday::Monday, Weekday::Tuesday, Weekday::Friday);
+        auto filter = WeekdayFilter::create(std::set{Weekday::Monday, Weekday::Tuesday, Weekday::Friday});
 
         std::cout << "dt = " << dt << std::endl;
 

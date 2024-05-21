@@ -16,7 +16,9 @@ class WeekdayFilter : public Filter {
  public:
      WeekdayFilter(Weekday weekday) : Filter(FilterType::Weekday), _weekdays({weekday}) { }
 
-     WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) { }
+     WeekdayFilter(const std::set<Weekday>& weekdays) : Filter(FilterType::Weekday), _weekdays(weekdays) {
+         validate();
+     }
 
      template<class V>
      static Pointer create(const V& value) {
@@ -65,11 +67,17 @@ class WeekdayFilter : public Filter {
              return moonlight::str::chr(weekday_chrs[weekday_id]);
          });
 
-         return moonlight::str::join(weekday_chrs);
+         return moonlight::str::join(weekday_strs);
      }
 
 
  private:
+     void validate() const {
+         if (_weekdays.size() == 0) {
+             THROW(Error, "At least one weekday must be provided for WeekdayFilter.");
+         }
+     }
+
      std::vector<Range> weekday_ranges(const Zone& zone, const Date& date) const {
          std::vector<Range> ranges;
 

@@ -11,7 +11,7 @@
 #include <iostream>
 #include "moonlight/test.h"
 #include "timefilter/duration.h"
-#include "timefilter/range.h"
+#include "timefilter/static_range.h"
 
 using namespace timefilter;
 using namespace moonlight;
@@ -24,12 +24,12 @@ int main() {
         Datetime dtA(1988, Month::June, 8, 12, 00);
         Datetime dtPivot(1980, Month::January, 1);
 
-        auto filterA = StaticRangeFilter::create(dtA, dtA + seconds(1));
+        auto filterA = StaticRangeFilter::create(dtA, seconds(1));
         auto rangeA = filterA->next_range(dtPivot);
         std::cout << "rangeA = " << rangeA.value() << ", " << rangeA->duration() << std::endl;
         ASSERT_EQUAL(rangeA->duration(), seconds(1));
 
-        auto filterB = DurationFilter::create(filterA, days(1));
+        auto filterB = FilterDuration::create(filterA, days(1));
         auto rangeB = filterB->next_range(dtPivot);
         std::cout << "rangeB = " << rangeB.value() << ", " << rangeB->duration() << std::endl;
         ASSERT_EQUAL(rangeB->duration(), days(1));
@@ -38,12 +38,12 @@ int main() {
         Datetime dtA(1988, Month::June, 8, 12, 00);
         Datetime dtPivot(2525, Month::January, 1);
 
-        auto filterA = StaticRangeFilter::create(dtA, dtA + seconds(1));
+        auto filterA = StaticRangeFilter::create(dtA, seconds(1));
         auto rangeA = filterA->prev_range(dtPivot);
         std::cout << "rangeA = " << rangeA.value() << ", " << rangeA->duration() << std::endl;
         ASSERT_EQUAL(rangeA->duration(), seconds(1));
 
-        auto filterB = DurationFilter::create(filterA, days(1));
+        auto filterB = FilterDuration::create(filterA, days(1));
         auto rangeB = filterB->prev_range(dtPivot);
         std::cout << "rangeB = " << rangeB.value() << ", " << rangeB->duration() << std::endl;
         ASSERT_EQUAL(rangeB->duration(), days(1));

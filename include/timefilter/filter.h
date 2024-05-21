@@ -23,13 +23,15 @@ enum class FilterType {
     Datetime,
     Duration,
     FilterList,
+    FilterOffset,
     FilterSet,
     Month,
     Monthday,
-    Offset,
-    Range,
+    RelativeRange,
+    StaticRange,
     Time,
     Weekday,
+    WeekdayMonthday,
     WeekdayOfMonth,
     Year
 };
@@ -43,7 +45,7 @@ inline std::set<FilterType>& absolute_filter_types() {
     static std::set<FilterType> types = {
         FilterType::Date,
         FilterType::Datetime,
-        FilterType::Range,
+        FilterType::StaticRange,
         FilterType::Year
     };
     return types;
@@ -53,9 +55,9 @@ inline std::set<FilterType>& relative_filter_types() {
     static std::set<FilterType> types = {
         FilterType::Duration,
         FilterType::FilterList,
+        FilterType::FilterOffset,
         FilterType::FilterSet,
-        FilterType::Offset,
-        FilterType::Range
+        FilterType::RelativeRange
     };
     return types;
 }
@@ -67,13 +69,15 @@ inline const std::string& filter_type_name(FilterType type) {
         "Datetime",
         "Duration",
         "FilterList",
+        "FilterOffset",
         "FilterSet",
         "Month",
         "Monthday",
-        "Offset",
-        "Range",
+        "RelativeRange",
+        "StaticRange",
         "Time",
         "Weekday",
+        "WeekdayMonthday",
         "WeekdayOfMonth",
         "Year"
     };
@@ -122,12 +126,16 @@ class Filter : public std::enable_shared_from_this<Filter> {
          return out;
      }
 
-     bool is_absolute() const {
+     virtual bool is_absolute() const {
          return absolute_filter_types().contains(type());
      }
 
      bool is_relative() const {
          return relative_filter_types().contains(type());
+     }
+
+     virtual Pointer simplify() const {
+         return shared_from_this();
      }
 
  protected:

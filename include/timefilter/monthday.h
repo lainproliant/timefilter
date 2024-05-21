@@ -70,7 +70,12 @@ class MonthdayFilter : public Filter {
      }
 
  private:
-     void validate() {
+     void validate() const {
+         if (_days.size() == 0) {
+             THROW(Error, "At least one monthday must be provided for MonthdayFilter.");
+
+         }
+
          for (int day : _days) {
              if (day == 0 || day < -31 || day > 31) {
                  THROW(Error, "Offset x must be: '-31 <= x <= 31' and can't be 0 for offset in MonthdayFilter.");

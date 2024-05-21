@@ -81,9 +81,14 @@ class WeekdayOfMonthFilter : public Filter {
 
          if (_offset > 0) {
              date = month_start;
+
              for (int x = 0; x < _offset; date = date.advance_days(1)) {
                  if (date.weekday() == _weekday) {
                      x++;
+
+                     if (x == _offset) {
+                         break;
+                     }
                  }
              }
 
@@ -92,6 +97,10 @@ class WeekdayOfMonthFilter : public Filter {
              for (int x = 0; x > _offset; date = date.recede_days(1)) {
                  if (date.weekday() == _weekday) {
                      x--;
+
+                     if (x == _offset) {
+                         break;
+                     }
                  }
              }
          }

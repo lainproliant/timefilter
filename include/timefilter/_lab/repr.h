@@ -20,15 +20,15 @@ int main() {
     while (std::cin >> year >> month >> day >> hour >> minute) {
         auto pivot_dt = moonlight::date::Datetime(zone, moonlight::date::Date(year, month, day), moonlight::date::Time(hour, minute));
 
-        auto next_range = filter->next_range(pivot_dt);
-        auto prev_range = filter->prev_range(pivot_dt);
 
+        auto next_range = filter->next_range(pivot_dt);
         if (next_range.has_value()) {
             std::cout << "next: " << *next_range << std::endl;
         } else {
             std::cout << "next: (none)" << std::endl;
         }
 
+        auto prev_range = filter->prev_range(pivot_dt);
         if (prev_range.has_value()) {
             std::cout << "prev: " << *prev_range << std::endl;
         } else {

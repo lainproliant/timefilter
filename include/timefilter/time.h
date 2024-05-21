@@ -15,7 +15,9 @@ namespace timefilter {
 class TimeFilter : public Filter {
  public:
      TimeFilter(const Time& time) : Filter(FilterType::Time), _times({time}) { }
-     TimeFilter(const std::set<Time>& times) : Filter(FilterType::Time), _times(times) { }
+     TimeFilter(const std::set<Time>& times) : Filter(FilterType::Time), _times(times) {
+         validate();
+     }
 
      template<class V>
      static Pointer create(const V& param) {
@@ -69,6 +71,12 @@ class TimeFilter : public Filter {
      }
 
  private:
+     void validate() const {
+         if (_times.size() == 0) {
+             THROW(Error, "At least one time must be provided for TimeFilter.");
+         }
+     }
+
      std::vector<Range> time_ranges(const Zone& zone, const Date& date) const {
          std::vector<Range> ranges;
 

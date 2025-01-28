@@ -47,7 +47,7 @@ ENV.update(
 
 # --------------------------------------------------------------------
 @task(keep=True)
-def deps():
+def dev_deps():
     """Fetch third-party repos."""
     return [checkout(repo) for repo in DEPS]
 
@@ -71,14 +71,14 @@ def headers():
 
 
 # -------------------------------------------------------------------
-@task(dep="deps")
-def tests(test_sources, headers, deps):
+@task(dep="dev_deps")
+def tests(test_sources, headers, dev_deps):
     return [compile(src, headers=headers) for src in test_sources]
 
 
 # -------------------------------------------------------------------
-@task(dep="deps")
-def labs(lab_sources, headers, deps):
+@task(dep="dev_deps")
+def labs(lab_sources, headers, dev_deps):
     return [compile(src, headers=headers) for src in lab_sources]
 
 

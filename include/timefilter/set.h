@@ -19,6 +19,8 @@
 
 namespace timefilter {
 
+const Duration CUTOFF_DURATION = Duration::of_days(365 * 1000);
+
 class FilterSet : public Filter {
  public:
      typedef std::shared_ptr<FilterSet> Pointer;
@@ -35,11 +37,11 @@ class FilterSet : public Filter {
      }
 
      std::optional<Range> next_range(const Datetime& dt) const override {
-         return _next_range(Range::eternity(), dt, get_filter_stack());
+         return _next_range(dt, get_filter_stack());
      }
 
      std::optional<Range> prev_range(const Datetime& dt) const override {
-         return _prev_range(Range::eternity(), dt, get_filter_stack());
+         return _prev_range(dt, get_filter_stack());
      }
 
      bool empty() const {
@@ -128,6 +130,77 @@ class FilterSet : public Filter {
      }
 
  private:
+     class Frame {
+     public:
+         Frame(const std::stack<Filter::Pointer> stack, const Datetime& pivot, const std::optional<Range>& limit = {})
+         : _stack(stack), _pivot(pivot), _limit(limit) { }
+
+         const Datetime& pivot() const {
+             return _pivot;
+         }
+
+         void pivot(const Datetime& dt) {
+             _pivot = dt;
+         }
+
+         bool is_final() const {
+             return _stack.size() == 1;
+         }
+
+         const Filter& filter() const {
+             return *_stack.top();
+         }
+
+         std::optional<Range> next_range() const {
+             auto limit = _limit.value_or(Range::eternity());
+             return filter().next_range(_pivot).and_then([=](const Range& rg) {
+                 return rg.clip_to(limit);
+             });
+         }
+
+         std::optional<Range> prev_range() const {
+             auto limit = _limit.value_or(Range::eternity());
+             return filter().prev_range(_pivot).and_then([=](const Range& rg) {
+                 return rg.clip_to(limit);
+             });
+         }
+
+         std::optional<Range> current_range() const {
+             auto limit = _limit.value_or(Range::eternity());
+             return filter().current_range(_pivot).and_then([=](const Range& rg) {
+                 return rg.clip_to(limit);
+             });
+         }
+
+         Frame next() const {
+
+         }
+
+     private:
+         std::stack<Filter::Pointer> _stack;
+         Datetime _pivot;
+         std::optional<Range> _limit;
+     };
+
+     struct Frame {
+         std::stack<Filter::Pointer> stack;
+         Datetime pivot;
+         std::optional<Range> limit;
+
+         const Filter& filter() const {
+             return *stack.top();
+         }
+
+         std::optional<Range> clip_to_limit(const Range& range) const {
+             if (! limit.has_value()) {
+                 return range;
+             }
+
+             return range.clip_to(*limit);
+         }
+
+     };
+
      void ingest_month_filter(Filter::Pointer filter) {
          std::shared_ptr<const MonthFilter> month_filter = static_pointer_cast<const MonthFilter>(filter);
          std::set<Month> months = month_filter->months();
@@ -423,91 +496,66 @@ class FilterSet : public Filter {
 
              if ((days.size() == 1 && (days.contains(29) || days.contains(-29))) ||
                  (days.size() == 2 && (days.contains(29) && days.contains(-29)))) {
-                 THROW(Error, "Year " + std::to_string(year_filter->year()) + "is not a leap year.");
+                 THROW(Error, "Year " + std::to_string(year_filter->year()) + " is not a leap year.");
              }
          }
      }
 
-     static std::optional<Range> _next_range(const Range& abs_range, const Datetime& dt, std::stack<Filter::Pointer> stack) {
-         if (stack.empty()) {
-             return {};
-         }
+     static std::optional<Range> _next_range(const Datetime& dt, std::stack<Filter::Pointer> stack) {
+         std::stack<Frame> frames;
+         const auto scan_cutoff = dt + CUTOFF_DURATION;
+         frames.push({.stack=stack, .pivot=dt, .limit={}});
 
-         auto filter = stack.top();
-         stack.pop();
+         while (! frames.empty()) {
+             auto frame = frames.top();
+             auto next_rg = frame.filter().next_range(frame.pivot).and_then([&](const auto& rg) {
+                 return frame.clip_to_limit(rg);
+             });
 
-         auto next_rg = filter->next_range(dt);
+             if (frame.is_final()) {
+                 if (next_rg.has_value()) {
+                     return next_rg;
 
-         if (next_rg.has_value()) {
-             if (! next_rg->intersects(abs_range)) {
+                 } else {
+                     frames.pop();
+                 }
+
+             } else {
+                 auto current_rg = frame.filter().current_range(frame.pivot);
+
+                 if (current_rg.has_value()) {
+
+                 }
+             }
+
+
+             auto next_rg = filter->next_range(dt);
+
+
+             if (! next_rg.has_value()) {
                  return {};
              }
 
-             if (! stack.empty()) {
-                 auto inner_rg = _next_range(next_rg.value(), next_rg->start(), stack);
-
-                 if (inner_rg.has_value() && inner_rg->intersects(next_rg.value())) {
-                     next_rg = inner_rg->clip_to(next_rg.value());
-
+             if (abs_range.has_value()) {
+                 if (abs_range->contains(next_rg->start())) {
+                     next_rg = next_rg->clip_to(*abs_range);
                  } else {
-                     stack.push(filter);
-                     next_rg = _next_range(abs_range, next_rg->start(), stack);
+                     return {};
                  }
+             }
+
+             if (stack.size() == 1) {
+                 return next_rg;
              }
          }
 
-         if (! next_rg.has_value() && ! stack.empty()) {
-             auto prev_rg = filter->prev_range(dt);
-             if (prev_rg.has_value() && prev_rg->contains(dt)) {
-                 next_rg = _next_range(prev_rg.value(), dt, stack);
-                 if (next_rg.has_value() && prev_rg->contains(next_rg->start())) {
-                     next_rg = next_rg->clip_to(prev_rg.value());
-                 } else {
-                     next_rg = {};
-                 }
-             }
-         }
-
-         if (next_rg.has_value()) {
-             next_rg = next_rg->clip_to(abs_range);
-         }
-
-         return next_rg;
+         return {};
      }
 
-     static std::optional<Range> _prev_range(const Range& abs_range, const Datetime& dt, std::stack<Filter::Pointer> stack) {
+     static std::optional<Range> _prev_range(const std::optional<Range>& abs_range, const Datetime& dt, std::stack<Filter::Pointer> stack) {
          if (stack.empty()) {
              return {};
          }
-
-         auto filter = stack.top();
-         stack.pop();
-
-         auto prev_rg = filter->prev_range(dt);
-
-         if (prev_rg.has_value()) {
-             if (! prev_rg->intersects(abs_range)) {
-                 return {};
-             }
-
-             if (! stack.empty()) {
-                 auto inner_rg = _prev_range(prev_rg.value(), prev_rg->end(), stack);
-
-                 if (inner_rg.has_value() && prev_rg->intersects(inner_rg.value())) {
-                     prev_rg = inner_rg->clip_to(prev_rg.value());
-
-                 } else {
-                     stack.push(filter);
-                     prev_rg = _prev_range(abs_range, prev_rg->start() - Duration::of_seconds(1), stack);
-                 }
-             }
-         }
-
-         if (prev_rg.has_value()) {
-             prev_rg = prev_rg->clip_to(abs_range);
-         }
-
-         return prev_rg;
      }
 
      std::vector<Filter::Pointer> _filters;

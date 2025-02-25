@@ -105,6 +105,16 @@ class Filter : public std::enable_shared_from_this<Filter> {
      virtual std::optional<Range> next_range(const Datetime& dt) const = 0;
      virtual std::optional<Range> prev_range(const Datetime& dt) const = 0;
 
+     std::optional<Range> current_range(const Datetime& dt) const {
+         auto prev_rg = prev_range(dt);
+
+         if (prev_rg.has_value() && prev_rg->contains(dt)) {
+             return prev_rg;
+         }
+
+         return {};
+     }
+
      std::string repr() const {
          std::ostringstream sb;
          sb << *this;

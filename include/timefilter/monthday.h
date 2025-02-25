@@ -28,31 +28,59 @@ class MonthdayFilter : public Filter {
      }
 
      std::optional<Range> next_range(const Datetime& dt) const override {
-         for (Date date = dt.date().start_of_month();
-              date.year() - dt.date().year() <= 8;
-              date = date.next_month()) {
-             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+         Date range_month = dt.date().start_of_month();
+
+         while (range_month.year() - dt.date().year() <= 8) {
+             auto ranges = monthday_ranges(dt.zone(), range_month.year(), range_month.month());
+             std::cout << "rm = " << range_month << ", dt = " << dt << ", ranges = " << moonlight::str::join(ranges, ",") << std::endl;
              for (auto iter = ranges.begin(); iter != ranges.end(); iter++) {
                  if (dt < iter->start()) {
                      return *iter;
                  }
              }
+
+             range_month = range_month.next_month();
          }
+
+//         for (Date date = dt.date().start_of_month();
+//              std::abs(date.year() - dt.date().year()) <= 8;
+//              date = date.next_month()) {
+//             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+//             std::cout << "dy = " << std::abs(date.year() - dt.date().year()) << ", dt = " << dt << ", ranges = " << moonlight::str::join(ranges, ",") << std::endl;
+//             for (auto iter = ranges.begin(); iter != ranges.end(); iter++) {
+//                 if (dt < iter->start()) {
+//                     return *iter;
+//                 }
+//             }
+//         }
 
         THROW(Error, "Monthday filter could not find a next range.");
      }
 
      std::optional<Range> prev_range(const Datetime& dt) const override {
-         for (Date date = dt.date().start_of_month();
-              dt.date().year() - date.year() <= 8;
-              date = date.prev_month()) {
-             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+         Date range_month = dt.date().start_of_month();
+
+         while (dt.date().year() - range_month.year() <= 8) {
+             auto ranges = monthday_ranges(dt.zone(), range_month.year(), range_month.month());
+             std::cout << "rm = " << range_month << ", dt = " << dt << ", ranges = " << moonlight::str::join(ranges, ",") << std::endl;
              for (auto iter = ranges.rbegin(); iter != ranges.rend(); iter++) {
                  if (dt >= iter->start()) {
                      return *iter;
                  }
              }
+
+             range_month = range_month.prev_month();
          }
+//         for (Date date = dt.date().start_of_month();
+//              dt.date().year() - date.year() <= 8;
+//              date = date.prev_month()) {
+//             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+//             for (auto iter = ranges.rbegin(); iter != ranges.rend(); iter++) {
+//                 if (dt >= iter->start()) {
+//                     return *iter;
+//                 }
+//             }
+//         }
 
         THROW(Error, "Monthday filter could not find a prev range.");
      }

@@ -8,6 +8,7 @@
 #ifndef __TIMEFILTER_MONTHDAY_H
 #define __TIMEFILTER_MONTHDAY_H
 
+#include "timefilter/constants.h"
 #include "timefilter/filter.h"
 
 namespace timefilter {
@@ -28,33 +29,37 @@ class MonthdayFilter : public Filter {
      }
 
      std::optional<Range> next_range(const Datetime& dt) const override {
-         for (Date date = dt.date().start_of_month();
-              date.year() - dt.date().year() <= 8;
-              date = date.next_month()) {
-             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+         Date range_month = dt.date().start_of_month();
+
+         for (int x = 0; x < FRAME_SCAN_LIMIT; x++) {
+             auto ranges = monthday_ranges(dt.zone(), range_month.year(), range_month.month());
              for (auto iter = ranges.begin(); iter != ranges.end(); iter++) {
                  if (dt < iter->start()) {
                      return *iter;
                  }
              }
+
+             range_month = range_month.next_month();
          }
 
-        THROW(Error, "Monthday filter could not find a next range.");
+         THROW(Error, "Monthday filter could not find a next range.");
      }
 
      std::optional<Range> prev_range(const Datetime& dt) const override {
-         for (Date date = dt.date().start_of_month();
-              dt.date().year() - date.year() <= 8;
-              date = date.prev_month()) {
-             auto ranges = monthday_ranges(dt.zone(), date.year(), date.month());
+         Date range_month = dt.date().start_of_month();
+
+         for (int x = 0; x < FRAME_SCAN_LIMIT; x++) {
+             auto ranges = monthday_ranges(dt.zone(), range_month.year(), range_month.month());
              for (auto iter = ranges.rbegin(); iter != ranges.rend(); iter++) {
                  if (dt >= iter->start()) {
                      return *iter;
                  }
              }
+
+             range_month = range_month.prev_month();
          }
 
-        THROW(Error, "Monthday filter could not find a prev range.");
+         THROW(Error, "Monthday filter could not find a prev range.");
      }
 
      const std::set<int>& days() const {

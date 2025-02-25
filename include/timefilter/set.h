@@ -15,6 +15,7 @@
 #include "timefilter/weekday.h"
 #include "timefilter/weekday_monthday.h"
 #include "timefilter/year.h"
+#include "timefilter/constants.h"
 #include <stack>
 
 namespace timefilter {
@@ -22,6 +23,22 @@ namespace timefilter {
 class FilterSet : public Filter {
  public:
      typedef std::shared_ptr<FilterSet> Pointer;
+
+     struct ScanResult {
+         std::optional<Range> range = {};
+         bool dead = false;
+     };
+
+     static std::string _dbg_print_stack(std::stack<Filter::Pointer> stack) {
+         std::ostringstream sb;
+         std::vector<std::string> elements;
+         while (! stack.empty()) {
+             elements.push_back(stack.top()->repr());
+             stack.pop();
+         }
+         sb << moonlight::str::join(elements, ",");
+         return sb.str();
+     }
 
      FilterSet() : Filter(FilterType::FilterSet) { }
      FilterSet(Pointer set) : Filter(FilterType::FilterSet), _filters(set->_filters) { }
@@ -35,11 +52,11 @@ class FilterSet : public Filter {
      }
 
      std::optional<Range> next_range(const Datetime& dt) const override {
-         return _next_range(Range::eternity(), dt, get_filter_stack());
+         return _scan_next_range(Range::eternity(), dt, get_filter_stack()).range;
      }
 
      std::optional<Range> prev_range(const Datetime& dt) const override {
-         return _prev_range(Range::eternity(), dt, get_filter_stack());
+         return _scan_prev_range(Range::eternity(), dt, get_filter_stack()).range;
      }
 
      bool empty() const {
@@ -387,21 +404,21 @@ class FilterSet : public Filter {
          auto monthday_filter = std::static_pointer_cast<const MonthdayFilter>(monthday_filter_box.value());
          auto month_filter = std::static_pointer_cast<const MonthFilter>(month_filter_box.value());
 
-         bool monthdays_reachable_normally = false;
+         bool monthdays_reachable = false;
 
          for (auto monthday : monthday_filter->days()) {
              for (auto month : month_filter->months()) {
                  if (last_day_of_month(2000 /* leap year */, month) >= std::abs(monthday)) {
-                     monthdays_reachable_normally = true;
+                     monthdays_reachable = true;
                      break;
                  }
              }
-             if (monthdays_reachable_normally) {
+             if (monthdays_reachable) {
                  break;
              }
          }
 
-         if (! monthdays_reachable_normally) {
+         if (! monthdays_reachable) {
              THROW(Error, "None of the monthdays provided ever occur in the given months.");
          }
 
@@ -423,91 +440,96 @@ class FilterSet : public Filter {
 
              if ((days.size() == 1 && (days.contains(29) || days.contains(-29))) ||
                  (days.size() == 2 && (days.contains(29) && days.contains(-29)))) {
-                 THROW(Error, "Year " + std::to_string(year_filter->year()) + "is not a leap year.");
+                 THROW(Error, "Year " + std::to_string(year_filter->year()) + " is not a leap year.");
              }
          }
      }
 
-     static std::optional<Range> _next_range(const Range& abs_range, const Datetime& dt, std::stack<Filter::Pointer> stack) {
+     static ScanResult _scan_next_range(const Range& limit, const Datetime& dt, std::stack<Filter::Pointer> stack) {
          if (stack.empty()) {
              return {};
          }
 
          auto filter = stack.top();
          stack.pop();
-
          auto next_rg = filter->next_range(dt);
 
-         if (next_rg.has_value()) {
-             if (! next_rg->intersects(abs_range)) {
-                 return {};
+         if (stack.empty()) {
+             if (next_rg.has_value()) {
+                 auto range = next_rg->clip_to(limit);
+                 return {.range=range};
              }
 
-             if (! stack.empty()) {
-                 auto inner_rg = _next_range(next_rg.value(), next_rg->start(), stack);
-
-                 if (inner_rg.has_value() && inner_rg->intersects(next_rg.value())) {
-                     next_rg = inner_rg->clip_to(next_rg.value());
-
-                 } else {
-                     stack.push(filter);
-                     next_rg = _next_range(abs_range, next_rg->start(), stack);
-                 }
-             }
+             return {.range={}, .dead=true};
          }
 
-         if (! next_rg.has_value() && ! stack.empty()) {
-             auto prev_rg = filter->prev_range(dt);
-             if (prev_rg.has_value() && prev_rg->contains(dt)) {
-                 next_rg = _next_range(prev_rg.value(), dt, stack);
-                 if (next_rg.has_value() && prev_rg->contains(next_rg->start())) {
-                     next_rg = next_rg->clip_to(prev_rg.value());
-                 } else {
-                     next_rg = {};
-                 }
+         auto current_rg = filter->current_range(dt);
+
+         if (current_rg.has_value()) {
+             auto result = _scan_next_range(*current_rg, dt, stack);
+
+             if (result.dead) {
+                 return {.range={}, .dead=true};
+             }
+
+             if (result.range.has_value()) {
+                 return result;
              }
          }
 
-         if (next_rg.has_value()) {
-             next_rg = next_rg->clip_to(abs_range);
+         if (! next_rg.has_value()) {
+             return {.range={}, .dead=true};
          }
 
-         return next_rg;
+         auto frame_rg = next_rg;
+
+         for (int x = 0; x < FRAME_SCAN_LIMIT && frame_rg.has_value() && limit.intersects(*frame_rg); x++) {
+             auto result = _scan_next_range(*frame_rg, frame_rg->start() - Duration::of_millis(1), stack);
+             if (result.dead || result.range.has_value()) {
+                 return result;
+             }
+
+             frame_rg = filter->next_range(frame_rg->start());
+         }
+
+         return {.range={}, .dead=false};
      }
 
-     static std::optional<Range> _prev_range(const Range& abs_range, const Datetime& dt, std::stack<Filter::Pointer> stack) {
+     static ScanResult _scan_prev_range(const Range& limit, const Datetime& dt, std::stack<Filter::Pointer> stack) {
          if (stack.empty()) {
              return {};
          }
 
+
          auto filter = stack.top();
          stack.pop();
-
          auto prev_rg = filter->prev_range(dt);
 
-         if (prev_rg.has_value()) {
-             if (! prev_rg->intersects(abs_range)) {
-                 return {};
+         if (stack.empty()) {
+             if (prev_rg.has_value()) {
+                 auto range = prev_rg->clip_to(limit);
+                 return {.range=range};
              }
 
-             if (! stack.empty()) {
-                 auto inner_rg = _prev_range(prev_rg.value(), prev_rg->end(), stack);
+             return {.range={}, .dead=true};
+         }
 
-                 if (inner_rg.has_value() && prev_rg->intersects(inner_rg.value())) {
-                     prev_rg = inner_rg->clip_to(prev_rg.value());
+         if (! prev_rg.has_value()) {
+             return {.range={}, .dead=true};
+         }
 
-                 } else {
-                     stack.push(filter);
-                     prev_rg = _prev_range(abs_range, prev_rg->start() - Duration::of_seconds(1), stack);
-                 }
+         auto frame_rg = prev_rg;
+
+         for (int x = 0; x < FRAME_SCAN_LIMIT && frame_rg.has_value() && limit.intersects(*frame_rg); x++) {
+             auto result = _scan_prev_range(*frame_rg, frame_rg->end() - Duration::of_millis(1), stack);
+             if (result.dead || result.range.has_value()) {
+                 return result;
              }
+
+             frame_rg = filter->prev_range(frame_rg->start() - Duration::of_millis(1));
          }
 
-         if (prev_rg.has_value()) {
-             prev_rg = prev_rg->clip_to(abs_range);
-         }
-
-         return prev_rg;
+         return {.range={}, .dead=true};
      }
 
      std::vector<Filter::Pointer> _filters;

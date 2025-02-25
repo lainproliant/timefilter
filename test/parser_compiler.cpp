@@ -55,6 +55,17 @@ int main() {
     };
 
     return TestSuite("timefilter parser tests")
+    .test("jan 1", [&]() {
+        filter_test("Jan 1",
+                    Datetime(2020, Month::January, 2),
+                    Range(
+                        Datetime(2020, Month::January, 1),
+                        Datetime(2020, Month::January, 2)),
+                    Range(
+                        Datetime(2021, Month::January, 1),
+                        Datetime(2021, Month::January, 2)
+                    ));
+    })
     .test("dmy_long", [&]() {
         filter_test("8 June 1988",
                     Datetime(2020, Month::January, 1),

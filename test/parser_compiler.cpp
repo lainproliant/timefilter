@@ -19,16 +19,11 @@ int main() {
     Parser parser;
     Compiler compiler;
 
-    auto compile = [&](const std::string& expr) -> Filter::Pointer {
-        auto tokens = parser.parse(expr);
-        return compiler.compile_filter(tokens);
-    };
-
     auto filter_test = [&](const std::string& expr,
                            const Datetime& pivot,
                            const std::optional<Range>& exp_prev_range,
                            const std::optional<Range>& exp_next_range) {
-        auto filter = compile(expr);
+        auto filter = compile_filter(expr);
         tfm::printfln("expr = '%s', filter = %s", expr, *filter);
         auto next_range = filter->next_range(pivot);
         auto prev_range = filter->prev_range(pivot);
@@ -317,6 +312,16 @@ int main() {
                         Datetime(2021, Month::April, 7, 15, 00),
                         Datetime(2021, Month::April, 7, 18, 00)
                     ));
+    })
+    .test("parse durations positive and negative", [&]() {
+        auto dA = compile_duration("+4w");
+        auto dB = compile_duration("-1d");
+
+        std::cout << "dA = " << dA << std::endl;
+        std::cout << "dB = " << dB << std::endl;
+
+        ASSERT_EQUAL(dA, Duration::of_days(28));
+        ASSERT_EQUAL(dB, Duration::of_days(-1));
     })
     .run();
 }

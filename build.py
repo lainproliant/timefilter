@@ -66,6 +66,12 @@ def lab_sources():
 
 # -------------------------------------------------------------------
 @provide
+def tool_sources():
+    return Path.cwd().glob("src/*.cpp")
+
+
+# -------------------------------------------------------------------
+@provide
 def headers():
     return Path.cwd().glob("include/timefilter/**/*.h")
 
@@ -83,6 +89,12 @@ def labs(lab_sources, headers, dev_deps):
 
 
 # -------------------------------------------------------------------
+@task(dep="dev_deps")
+def tools(tool_sources, headers, dev_deps):
+    return [compile(src, headers=headers) for src in tool_sources]
+
+
+# -------------------------------------------------------------------
 @task
 def run_tests(tests):
     return tuple(sh(f"{test.target}", test=test, cwd="test") for test in tests)
@@ -90,8 +102,8 @@ def run_tests(tests):
 
 # -------------------------------------------------------------------
 @task(default=True)
-def all(run_tests, labs):
-    return [run_tests, labs]
+def all(run_tests, labs, tools):
+    return [run_tests, labs, tools]
 
 
 # -------------------------------------------------------------------

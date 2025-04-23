@@ -72,6 +72,14 @@ class I18nStrings {
          throw moonlight::core::ValueError("Unknown weekday: " + s);
      }
 
+     std::string weekday_short(Weekday weekday) const {
+         return _short_weekdays.at(static_cast<int>(weekday));
+     }
+
+     std::string weekday_long(Weekday weekday) const {
+         return _long_weekdays.at(static_cast<int>(weekday));
+     }
+
      Month month(const std::string& s) const {
          for (size_t x = 0; x < 12; x++) {
              if (to_lower(s) == to_lower(_short_months[x]) ||
@@ -80,6 +88,14 @@ class I18nStrings {
              }
          }
          throw moonlight::core::ValueError("Unknown month: " + s);
+     }
+
+     std::string month_short(Month month) const {
+         return _short_months.at(static_cast<int>(month));
+     }
+
+     std::string month_long(Month month) const {
+         return _long_months.at(static_cast<int>(month));
      }
 
  private:
@@ -155,11 +171,11 @@ inline Grammar make_grammar(const I18nStrings& i18n) {
     .def(lex::match("([0-9]{1,2}):([0-9]{2})"), TokenType::H24_TIME)
     .def(lex::match("[0-9]{4,}" + term), TokenType::YEAR)
     .def(lex::match("[MTWHFSU]{1,7}"), TokenType::WEEKDAYS)
-    .def(lex::match("([0-9]+)(hr)").icase(), TokenType::DURATION)
-    .def(lex::match("([0-9]+)(min)").icase(), TokenType::DURATION)
-    .def(lex::match("([0-9]+)(sec)").icase(), TokenType::DURATION)
-    .def(lex::match("([0-9]+)(ms)").icase(), TokenType::DURATION)
-    .def(lex::match("([0-9]+)([wdhms])").icase(), TokenType::DURATION)
+    .def(lex::match("([-+]?[0-9]+)(hr)").icase(), TokenType::DURATION)
+    .def(lex::match("([-+]?[0-9]+)(min)").icase(), TokenType::DURATION)
+    .def(lex::match("([-+]?[0-9]+)(sec)").icase(), TokenType::DURATION)
+    .def(lex::match("([-+]?[0-9]+)(ms)").icase(), TokenType::DURATION)
+    .def(lex::match("([-+]?[0-9]+)([wdhms])").icase(), TokenType::DURATION)
     .def(lex::match(tfm::format("([0-9]{1,2})%s%s %s", monthday_suffix, negation_slug, i18n.long_month_rx())).icase(), TokenType::DAY_MONTH)
     .def(lex::match(tfm::format("([0-9]{1,2})%s%s %s", monthday_suffix, negation_slug, i18n.short_month_rx())).icase(), TokenType::DAY_MONTH)
     .def(lex::match(tfm::format("([0-9]{1,2})%s?%s", monthday_suffix, negation_slug)).icase(), TokenType::DAY_OF_MONTH)

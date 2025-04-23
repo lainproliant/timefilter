@@ -79,6 +79,7 @@ class Compiler {
 
      Duration compile_duration(const std::vector<Grammar::Token>& tokens) const {
          Context ctx;
+         std::copy(tokens.begin(), tokens.end(), std::back_inserter(ctx.tokens));
 
          auto machine = state_machine(ctx, DURATION);
          machine.run_until_complete();

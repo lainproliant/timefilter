@@ -16,6 +16,7 @@ namespace timefilter {
 // --------------------------------------------------------
 using namespace moonlight::date;
 EXCEPTION_TYPE(Error);
+EXCEPTION_SUBTYPE(Error, NotImplementedError);
 
 // --------------------------------------------------------
 enum class FilterType {
